@@ -1,22 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Switch
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { deviceStorageService } from '../services/DeviceStorageService';
-import { StoredDevices, SensorDevice } from '../types';
-import { Ionicons } from '@expo/vector-icons'; // Make sure to install expo/vector-icons
+import { SensorDevice, StoredDevices } from '../types';
 
 interface CollapsibleSection {
   [key: string]: boolean;
+}
+
+interface CameraDevice extends SensorDevice {
+  stream_url: string;
+  motion_sensor: string;
+  occupancy_sensor: string;
 }
 
 const SettingsScreen: React.FC = () => {
@@ -52,11 +58,9 @@ const SettingsScreen: React.FC = () => {
 
   const loadThemePreference = async () => {
     try {
-      // Load theme preference from storage
       const savedTheme = await deviceStorageService.loadThemePreference();
       setIsDarkTheme(savedTheme === 'dark');
-    } catch (error) {
-      // Default to light theme if loading fails
+    } catch {
       setIsDarkTheme(false);
     }
   };
@@ -65,9 +69,8 @@ const SettingsScreen: React.FC = () => {
     const newTheme = !isDarkTheme;
     setIsDarkTheme(newTheme);
     try {
-      // Save theme preference to storage
       await deviceStorageService.saveThemePreference(newTheme ? 'dark' : 'light');
-    } catch (error) {
+    } catch {
       console.error('Failed to save theme preference');
     }
   };
@@ -79,52 +82,50 @@ const SettingsScreen: React.FC = () => {
     }));
   };
 
- const updateDevice = async (
-  deviceType: keyof StoredDevices,
-  deviceId: string,
-  field: 'name' | 'entity',
-  value: string
-) => {
-  if (!devices) return;
+  const updateDevice = async (
+    deviceType: keyof StoredDevices,
+    deviceId: string,
+    field: string,
+    value: string
+  ) => {
+    if (!devices) return;
 
-  // Optimistically update UI
-  setDevices(prevDevices => {
-    if (!prevDevices) return prevDevices;
-    
-    const updatedDevices = { ...prevDevices };
-    
-    if (deviceType === 'doorSensor' || deviceType === 'security') {
-      if (updatedDevices[deviceType] && updatedDevices[deviceType].id === deviceId) {
-        updatedDevices[deviceType] = {
-          ...updatedDevices[deviceType],
-          [field]: value
-        } as SensorDevice;
+    // Optimistic UI update
+    setDevices(prevDevices => {
+      if (!prevDevices) return prevDevices;
+      const updatedDevices = { ...prevDevices };
+
+      if (deviceType === 'doorSensor' || deviceType === 'security') {
+        if (updatedDevices[deviceType] && updatedDevices[deviceType].id === deviceId) {
+          updatedDevices[deviceType] = {
+            ...updatedDevices[deviceType],
+            [field]: value
+          } as SensorDevice;
+        }
+      } else {
+        const deviceArray = [...(updatedDevices[deviceType] as any[])];
+        const deviceIndex = deviceArray.findIndex(device => device.id === deviceId);
+        if (deviceIndex !== -1) {
+          deviceArray[deviceIndex] = {
+            ...deviceArray[deviceIndex],
+            [field]: value
+          };
+          updatedDevices[deviceType] = deviceArray as any;
+        }
       }
-    } else {
-      const deviceArray = [...(updatedDevices[deviceType] as SensorDevice[])];
-      const deviceIndex = deviceArray.findIndex(device => device.id === deviceId);
-      if (deviceIndex !== -1) {
-        deviceArray[deviceIndex] = {
-          ...deviceArray[deviceIndex],
-          [field]: value
-        };
-        updatedDevices[deviceType] = deviceArray as any;
-      }
+
+      return updatedDevices;
+    });
+
+    try {
+      await deviceStorageService.updateDevice(deviceType, deviceId, { [field]: value });
+    } catch (error) {
+      Alert.alert('Error', 'Failed to save device settings');
+      loadDevices();
     }
-    
-    return updatedDevices;
-  });
+  };
 
-  // Save to storage in background
-  try {
-    await deviceStorageService.updateDevice(deviceType, deviceId, { [field]: value });
-  } catch (error) {
-    Alert.alert('Error', 'Failed to save device settings');
-    // Revert on error by reloading from storage
-    loadDevices();
-  }
-};
-
+  // Generic device input (non-camera)
   const renderDeviceInput = (device: SensorDevice, deviceType: keyof StoredDevices) => (
     <View key={device.id} style={[styles.deviceContainer, isDarkTheme && styles.deviceContainerDark]}>
       <Text style={[styles.deviceLabel, isDarkTheme && styles.textDark]}>{device.name}</Text>
@@ -146,29 +147,65 @@ const SettingsScreen: React.FC = () => {
     </View>
   );
 
+  // Camera-specific inputs
+  const renderCameraInput = (camera: CameraDevice, deviceType: keyof StoredDevices) => (
+    <View key={camera.id} style={[styles.deviceContainer, isDarkTheme && styles.deviceContainerDark]}>
+      <Text style={[styles.deviceLabel, isDarkTheme && styles.textDark]}>{camera.name}</Text>
+      <TextInput
+        style={[styles.input, isDarkTheme && styles.inputDark]}
+        placeholder="Camera Name"
+        placeholderTextColor={isDarkTheme ? '#888' : '#999'}
+        value={camera.name}
+        onChangeText={(value) => updateDevice(deviceType, camera.id, 'name', value)}
+      />
+      <TextInput
+        style={[styles.input, isDarkTheme && styles.inputDark]}
+        placeholder="Stream URL (e.g., rtsp://...)"
+        placeholderTextColor={isDarkTheme ? '#888' : '#999'}
+        value={camera.stream_url || ''}
+        onChangeText={(value) => updateDevice(deviceType, camera.id, 'stream_url', value)}
+        autoCapitalize="none"
+      />
+      <TextInput
+        style={[styles.input, isDarkTheme && styles.inputDark]}
+        placeholder="Motion Sensor Entity ID"
+        placeholderTextColor={isDarkTheme ? '#888' : '#999'}
+        value={camera.motion_sensor || ''}
+        onChangeText={(value) => updateDevice(deviceType, camera.id, 'motion_sensor', value)}
+        autoCapitalize="none"
+      />
+      <TextInput
+        style={[styles.input, isDarkTheme && styles.inputDark]}
+        placeholder="Occupancy Sensor Entity ID"
+        placeholderTextColor={isDarkTheme ? '#888' : '#999'}
+        value={camera.occupancy_sensor || ''}
+        onChangeText={(value) => updateDevice(deviceType, camera.id, 'occupancy_sensor', value)}
+        autoCapitalize="none"
+      />
+    </View>
+  );
+
   const renderDeviceSection = (title: string, devices: SensorDevice[], deviceType: keyof StoredDevices) => (
     <View style={[styles.section, isDarkTheme && styles.sectionDark]}>
-      <TouchableOpacity 
-        style={styles.sectionHeader}
-        onPress={() => toggleSection(deviceType)}
-        activeOpacity={0.7}
-      >
+      <TouchableOpacity style={styles.sectionHeader} onPress={() => toggleSection(deviceType)} activeOpacity={0.7}>
         <View style={styles.sectionTitleContainer}>
           <Text style={[styles.sectionTitle, isDarkTheme && styles.textDark]}>{title}</Text>
           <Text style={[styles.deviceCount, isDarkTheme && styles.textSecondaryDark]}>
             {devices.length} device{devices.length !== 1 ? 's' : ''}
           </Text>
         </View>
-        <Ionicons 
-          name={collapsedSections[deviceType] ? "chevron-down" : "chevron-up"} 
-          size={20} 
-          color={isDarkTheme ? "#fff" : "#666"} 
+        <Ionicons
+          name={collapsedSections[deviceType] ? "chevron-down" : "chevron-up"}
+          size={20}
+          color={isDarkTheme ? "#fff" : "#666"}
         />
       </TouchableOpacity>
-      
+
       {!collapsedSections[deviceType] && (
         <View style={styles.devicesList}>
-          {devices.map(device => renderDeviceInput(device, deviceType))}
+          {deviceType === 'cameras'
+            ? (devices as CameraDevice[]).map(cam => renderCameraInput(cam, deviceType))
+            : devices.map(dev => renderDeviceInput(dev, deviceType))}
         </View>
       )}
     </View>
@@ -176,26 +213,19 @@ const SettingsScreen: React.FC = () => {
 
   const renderSingleDeviceSection = (title: string, device: SensorDevice | null, deviceType: keyof StoredDevices) => {
     if (!device) return null;
-    
     return (
       <View style={[styles.section, isDarkTheme && styles.sectionDark]}>
-        <TouchableOpacity 
-          style={styles.sectionHeader}
-          onPress={() => toggleSection(deviceType)}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity style={styles.sectionHeader} onPress={() => toggleSection(deviceType)} activeOpacity={0.7}>
           <Text style={[styles.sectionTitle, isDarkTheme && styles.textDark]}>{title}</Text>
-          <Ionicons 
-            name={collapsedSections[deviceType] ? "chevron-down" : "chevron-up"} 
-            size={20} 
-            color={isDarkTheme ? "#fff" : "#666"} 
+          <Ionicons
+            name={collapsedSections[deviceType] ? "chevron-down" : "chevron-up"}
+            size={20}
+            color={isDarkTheme ? "#fff" : "#666"}
           />
         </TouchableOpacity>
-        
+
         {!collapsedSections[deviceType] && (
-          <View style={styles.devicesList}>
-            {renderDeviceInput(device, deviceType)}
-          </View>
+          <View style={styles.devicesList}>{renderDeviceInput(device, deviceType)}</View>
         )}
       </View>
     );
@@ -203,39 +233,24 @@ const SettingsScreen: React.FC = () => {
 
   const saveAllSettings = async () => {
     if (!devices) return;
-
     try {
       await deviceStorageService.saveDevices(devices);
       Alert.alert('Success', 'All settings have been saved successfully!');
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to save settings');
     }
   };
 
   const expandAllSections = () => {
-    setCollapsedSections({
-      waterSensors: false,
-      radarSensors: false,
-      tempHumiditySensors: false,
-      doorSensor: false,
-      lights: false,
-      cameras: false,
-      acs: false,
-      security: false,
-    });
+    const expanded: any = {};
+    Object.keys(collapsedSections).forEach(key => (expanded[key] = false));
+    setCollapsedSections(expanded);
   };
 
   const collapseAllSections = () => {
-    setCollapsedSections({
-      waterSensors: true,
-      radarSensors: true,
-      tempHumiditySensors: true,
-      doorSensor: true,
-      lights: true,
-      cameras: true,
-      acs: true,
-      security: true,
-    });
+    const collapsed: any = {};
+    Object.keys(collapsedSections).forEach(key => (collapsed[key] = true));
+    setCollapsedSections(collapsed);
   };
 
   if (loading) {
@@ -254,10 +269,8 @@ const SettingsScreen: React.FC = () => {
     );
   }
 
-  const themeStyles = isDarkTheme ? darkStyles : lightStyles;
-
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       style={[styles.container, isDarkTheme && styles.containerDark]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
@@ -267,10 +280,10 @@ const SettingsScreen: React.FC = () => {
           <View style={styles.headerTop}>
             <Text style={[styles.title, isDarkTheme && styles.textDark]}>Smart Home Settings</Text>
             <View style={styles.themeContainer}>
-              <Ionicons 
-                name={isDarkTheme ? "moon" : "sunny"} 
-                size={20} 
-                color={isDarkTheme ? "#ffd700" : "#ff8c00"} 
+              <Ionicons
+                name={isDarkTheme ? "moon" : "sunny"}
+                size={20}
+                color={isDarkTheme ? "#ffd700" : "#ff8c00"}
               />
               <Switch
                 value={isDarkTheme}
@@ -286,14 +299,14 @@ const SettingsScreen: React.FC = () => {
 
           {/* Quick Actions */}
           <View style={styles.quickActions}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.quickActionButton, isDarkTheme && styles.quickActionButtonDark]}
               onPress={expandAllSections}
             >
               <Ionicons name="expand-outline" size={16} color={isDarkTheme ? "#fff" : "#007AFF"} />
               <Text style={[styles.quickActionText, isDarkTheme && styles.textDark]}>Expand All</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.quickActionButton, isDarkTheme && styles.quickActionButtonDark]}
               onPress={collapseAllSections}
             >
@@ -309,13 +322,13 @@ const SettingsScreen: React.FC = () => {
         {renderDeviceSection('Temperature & Humidity', devices.tempHumiditySensors, 'tempHumiditySensors')}
         {renderSingleDeviceSection('Door Sensor', devices.doorSensor, 'doorSensor')}
         {renderDeviceSection('Lights', devices.lights, 'lights')}
-        {renderDeviceSection('Cameras', devices.cameras, 'cameras')}
+        {renderDeviceSection('Cameras', devices.cameras as any, 'cameras')}
         {renderDeviceSection('Air Conditioners', devices.acs, 'acs')}
         {renderSingleDeviceSection('Security System', devices.security, 'security')}
 
         {/* Save Button */}
-        <TouchableOpacity 
-          style={[styles.saveButton, isDarkTheme && styles.saveButtonDark]} 
+        <TouchableOpacity
+          style={[styles.saveButton, isDarkTheme && styles.saveButtonDark]}
           onPress={saveAllSettings}
           activeOpacity={0.8}
         >
@@ -330,25 +343,11 @@ const SettingsScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  containerDark: {
-    backgroundColor: '#121212',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-  },
-  loadingContainerDark: {
-    backgroundColor: '#121212',
-  },
+  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  containerDark: { backgroundColor: '#121212' },
+  scrollView: { flex: 1 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f5f5' },
+  loadingContainerDark: { backgroundColor: '#121212' },
   header: {
     backgroundColor: '#fff',
     paddingHorizontal: 16,
@@ -361,35 +360,12 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
-  headerDark: {
-    backgroundColor: '#1e1e1e',
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    flex: 1,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 12,
-  },
-  themeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  quickActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
+  headerDark: { backgroundColor: '#1e1e1e' },
+  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  title: { fontSize: 24, fontWeight: 'bold', color: '#333', flex: 1 },
+  subtitle: { fontSize: 16, color: '#666', marginBottom: 12 },
+  themeContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  quickActions: { flexDirection: 'row', gap: 12 },
   quickActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -399,20 +375,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
     borderRadius: 8,
   },
-  quickActionButtonDark: {
-    backgroundColor: '#2a2a2a',
-  },
-  quickActionText: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '500',
-  },
+  quickActionButtonDark: { backgroundColor: '#2a2a2a' },
+  quickActionText: { fontSize: 14, color: '#007AFF', fontWeight: '500' },
   section: {
     backgroundColor: '#fff',
     marginHorizontal: 16,
     marginBottom: 12,
     borderRadius: 12,
-    padding: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -420,47 +389,15 @@ const styles = StyleSheet.create({
     elevation: 5,
     overflow: 'hidden',
   },
-  sectionDark: {
-    backgroundColor: '#1e1e1e',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-  },
-  sectionTitleContainer: {
-    flex: 1,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-  },
-  deviceCount: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
-  },
-  devicesList: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-  deviceContainer: {
-    marginBottom: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  deviceContainerDark: {
-    borderBottomColor: '#2a2a2a',
-  },
-  deviceLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 8,
-    color: '#555',
-  },
+  sectionDark: { backgroundColor: '#1e1e1e' },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
+  sectionTitleContainer: { flex: 1 },
+  sectionTitle: { fontSize: 18, fontWeight: '600', color: '#333' },
+  deviceCount: { fontSize: 14, color: '#666', marginTop: 2 },
+  devicesList: { paddingHorizontal: 16, paddingBottom: 16 },
+  deviceContainer: { marginBottom: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  deviceContainerDark: { borderBottomColor: '#2a2a2a' },
+  deviceLabel: { fontSize: 14, fontWeight: '500', marginBottom: 8, color: '#555' },
   input: {
     borderWidth: 1,
     borderColor: '#ddd',
@@ -470,11 +407,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#fafafa',
   },
-  inputDark: {
-    borderColor: '#333',
-    backgroundColor: '#2a2a2a',
-    color: '#fff',
-  },
+  inputDark: { borderColor: '#333', backgroundColor: '#2a2a2a', color: '#fff' },
   saveButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -486,32 +419,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     padding: 16,
     borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
   },
-  saveButtonDark: {
-    backgroundColor: '#1565C0',
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  bottomSpacer: {
-    height: 20,
-  },
-  textDark: {
-    color: '#fff',
-  },
-  textSecondaryDark: {
-    color: '#aaa',
-  },
+  saveButtonDark: { backgroundColor: '#1565C0' },
+  saveButtonText: { color: '#fff', fontSize: 18, fontWeight: '600' },
+  bottomSpacer: { height: 20 },
+  textDark: { color: '#fff' },
+  textSecondaryDark: { color: '#aaa' },
 });
-
-const lightStyles = StyleSheet.create({});
-const darkStyles = StyleSheet.create({});
 
 export default SettingsScreen;
