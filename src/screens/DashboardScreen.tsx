@@ -1,25 +1,26 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useCallback, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  RefreshControl,
-  TouchableOpacity,
   Alert,
   Platform,
-  Switch
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
 import { deviceStorageService } from '../services/DeviceStorageService';
 import { SensorDevice } from '../types';
-import { Ionicons } from '@expo/vector-icons';
 
 const DashboardScreen: React.FC = () => {
   const [configuredDevices, setConfiguredDevices] = useState<SensorDevice[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isDarkTheme, setIsDarkTheme] = useState(false);
+  const [deviceStates, setDeviceStates] = useState<{ [key: string]: boolean }>({});
 
   // Load theme preference and devices when screen comes into focus
   useFocusEffect(
@@ -53,10 +54,44 @@ const DashboardScreen: React.FC = () => {
       setLoading(true);
       const devices = await deviceStorageService.getConfiguredDevices();
       setConfiguredDevices(devices);
+      
+      // Initialize device states (you would replace this with actual Home Assistant state)
+      const initialStates: { [key: string]: boolean } = {};
+      devices.forEach(device => {
+        if (device.type === 'light' || device.type === 'ac') {
+          initialStates[device.id] = false; // Default to off
+        }
+      });
+      setDeviceStates(initialStates);
     } catch (error) {
       Alert.alert('Error', 'Failed to load configured devices');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleDevice = async (deviceId: string, deviceType: string) => {
+    try {
+      // Update local state immediately for responsive UI
+      setDeviceStates(prev => ({
+        ...prev,
+        [deviceId]: !prev[deviceId]
+      }));
+
+      // Here you would call your Home Assistant service to toggle the device
+      // For now, we'll just simulate it
+      console.log(`Toggling ${deviceType} ${deviceId} to ${!deviceStates[deviceId]}`);
+      
+      // TODO: Replace with actual Home Assistant API call
+      // await homeAssistantService.toggleDevice(deviceId, !deviceStates[deviceId]);
+      
+    } catch (error) {
+      // Revert state on error
+      setDeviceStates(prev => ({
+        ...prev,
+        [deviceId]: !prev[deviceId]
+      }));
+      Alert.alert('Error', `Failed to toggle ${deviceType}`);
     }
   };
 
@@ -66,15 +101,15 @@ const DashboardScreen: React.FC = () => {
     setRefreshing(false);
   };
 
-  const getDeviceIcon = (type: string): string => {
+  const getDeviceIcon = (type: string, isOn: boolean = false): string => {
     switch (type) {
       case 'water': return '💧';
       case 'radar': return '📡';
       case 'temp_humidity': return '🌡️';
       case 'door': return '🚪';
-      case 'light': return '💡';
+      case 'light': return isOn ? '💡' : '💡'; // Different icons for on/off
       case 'camera': return '📹';
-      case 'ac': return '❄️';
+      case 'ac': return isOn ? '❄️' : '⛄'; // Snowflake when on, snowman when off
       case 'security': return '🔒';
       default: return '📱';
     }
@@ -94,27 +129,102 @@ const DashboardScreen: React.FC = () => {
     }
   };
 
-  const renderDeviceCard = (device: SensorDevice) => (
-    <TouchableOpacity 
-      key={device.id} 
-      style={[styles.deviceCard, isDarkTheme && styles.deviceCardDark]}
-      activeOpacity={0.7}
-    >
-      <View style={styles.deviceHeader}>
-        <Text style={styles.deviceIcon}>{getDeviceIcon(device.type)}</Text>
-        <View style={styles.deviceInfo}>
-          <Text style={[styles.deviceName, isDarkTheme && styles.textDark]}>{device.name}</Text>
-          <Text style={[styles.deviceType, isDarkTheme && styles.textSecondaryDark]}>{getDeviceTypeLabel(device.type)}</Text>
+  const getStatusColor = (isOn: boolean, isDark: boolean): string => {
+    if (isOn) {
+      return isDark ? '#4CAF50' : '#2E7D32'; // Green for on
+    }
+    return isDark ? '#666' : '#999'; // Gray for off
+  };
+
+  const getStatusText = (isOn: boolean): string => {
+    return isOn ? 'ON' : 'OFF';
+  };
+
+  const renderDeviceCard = (device: SensorDevice) => {
+    const isOn = deviceStates[device.id] || false;
+    const isToggleable = device.type === 'light' || device.type === 'ac';
+    
+    return (
+      <TouchableOpacity 
+        key={device.id} 
+        style={[styles.deviceCard, isDarkTheme && styles.deviceCardDark]}
+        activeOpacity={0.7}
+      >
+        <View style={styles.deviceHeader}>
+          <View style={[
+            styles.deviceIconContainer,
+            isToggleable && isOn && styles.deviceIconContainerActive,
+            { backgroundColor: isDarkTheme ? '#2a2a2a' : '#f8f9fa' }
+          ]}>
+            <Text style={[
+              styles.deviceIcon,
+              isToggleable && { color: getStatusColor(isOn, isDarkTheme) }
+            ]}>
+              {getDeviceIcon(device.type, isOn)}
+            </Text>
+          </View>
+          <View style={styles.deviceInfo}>
+            <Text style={[styles.deviceName, isDarkTheme && styles.textDark]}>{device.name}</Text>
+            <Text style={[styles.deviceType, isDarkTheme && styles.textSecondaryDark]}>
+              {getDeviceTypeLabel(device.type)}
+            </Text>
+          </View>
+          
+          {isToggleable && (
+            <View style={styles.toggleContainer}>
+              <View style={styles.statusContainer}>
+                <View style={[
+                  styles.statusDot,
+                  { backgroundColor: getStatusColor(isOn, isDarkTheme) }
+                ]} />
+                <Text style={[
+                  styles.statusText,
+                  isDarkTheme && styles.textDark,
+                  { color: getStatusColor(isOn, isDarkTheme) }
+                ]}>
+                  {getStatusText(isOn)}
+                </Text>
+              </View>
+              <Switch
+                value={isOn}
+                onValueChange={() => toggleDevice(device.id, device.type)}
+                trackColor={{ false: '#767577', true: isDarkTheme ? '#4CAF50' : '#81C784' }}
+                thumbColor={isOn ? (isDarkTheme ? '#4CAF50' : '#2E7D32') : (isDarkTheme ? '#aaa' : '#f4f3f4')}
+                ios_backgroundColor="#3e3e3e"
+              />
+            </View>
+          )}
         </View>
-      </View>
-      <View style={[styles.entityContainer, isDarkTheme && styles.entityContainerDark]}>
-        <Text style={[styles.entityLabel, isDarkTheme && styles.textSecondaryDark]}>Entity ID:</Text>
-        <Text style={[styles.entityValue, isDarkTheme && styles.textDark]}>
-          {device.entity}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+        
+        <View style={[styles.entityContainer, isDarkTheme && styles.entityContainerDark]}>
+          <Text style={[styles.entityLabel, isDarkTheme && styles.textSecondaryDark]}>Entity ID:</Text>
+          <Text style={[styles.entityValue, isDarkTheme && styles.textDark]}>
+            {device.entity}
+          </Text>
+        </View>
+
+        {isToggleable && (
+          <View style={styles.actionContainer}>
+            <TouchableOpacity
+              style={[
+                styles.toggleButton,
+                isOn ? styles.toggleButtonOn : styles.toggleButtonOff,
+                isDarkTheme && (isOn ? styles.toggleButtonOnDark : styles.toggleButtonOffDark)
+              ]}
+              onPress={() => toggleDevice(device.id, device.type)}
+            >
+              <Text style={[
+                styles.toggleButtonText,
+                isOn ? styles.toggleButtonTextOn : styles.toggleButtonTextOff
+              ]}>
+                {isOn ? 'Turn Off' : 'Turn On'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   const groupDevicesByType = (devices: SensorDevice[]) => {
     const grouped: { [key: string]: SensorDevice[] } = {};
@@ -275,7 +385,7 @@ const styles = StyleSheet.create({
   },
   deviceCard: {
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     shadowColor: '#000',
@@ -297,9 +407,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  deviceIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    backgroundColor: '#f8f9fa',
+  },
+  deviceIconContainerActive: {
+    transform: [{ scale: 1.05 }],
+  },
   deviceIcon: {
     fontSize: 24,
-    marginRight: 12,
   },
   deviceInfo: {
     flex: 1,
@@ -313,6 +434,24 @@ const styles = StyleSheet.create({
   deviceType: {
     fontSize: 14,
     color: '#666',
+  },
+  toggleContainer: {
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   entityContainer: {
     backgroundColor: '#f8f9fa',
@@ -336,6 +475,44 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
     color: '#333',
+  },
+  actionContainer: {
+    marginTop: 12,
+  },
+  toggleButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toggleButtonOn: {
+    backgroundColor: '#E8F5E8',
+    borderWidth: 2,
+    borderColor: '#4CAF50',
+  },
+  toggleButtonOff: {
+    backgroundColor: '#F5F5F5',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+  },
+  toggleButtonOnDark: {
+    backgroundColor: '#1B5E20',
+    borderColor: '#4CAF50',
+  },
+  toggleButtonOffDark: {
+    backgroundColor: '#424242',
+    borderColor: '#616161',
+  },
+  toggleButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  toggleButtonTextOn: {
+    color: '#2E7D32',
+  },
+  toggleButtonTextOff: {
+    color: '#666',
   },
   emptyContainer: {
     flex: 1,
