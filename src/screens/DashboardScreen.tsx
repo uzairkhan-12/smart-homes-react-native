@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Platform,
@@ -10,17 +10,35 @@ import {
   Switch,
   Text,
   TouchableOpacity,
-  View
+  View,
+  useWindowDimensions
 } from 'react-native';
 import { deviceStorageService } from '../services/DeviceStorageService';
 import { SensorDevice } from '../types';
 
+const CONTAINER_PADDING = 16;
+const CARD_GAP = 12;
+
 const DashboardScreen: React.FC = () => {
+  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = useWindowDimensions();
   const [configuredDevices, setConfiguredDevices] = useState<SensorDevice[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isDarkTheme, setIsDarkTheme] = useState(false);
   const [deviceStates, setDeviceStates] = useState<{ [key: string]: boolean }>({});
+
+  // Calculate responsive card widths based on current screen dimensions
+  const getCardWidth = (itemsPerRow: number) => {
+    const totalGap = CARD_GAP * (itemsPerRow - 1);
+    const availableWidth = SCREEN_WIDTH - (CONTAINER_PADDING * 2) - totalGap;
+    return availableWidth / itemsPerRow;
+  };
+
+  // Re-render when screen dimensions change (rotation)
+  useEffect(() => {
+    // This effect will trigger whenever SCREEN_WIDTH changes (on rotation)
+    console.log('Screen dimensions updated:', { SCREEN_WIDTH, SCREEN_HEIGHT });
+  }, [SCREEN_WIDTH, SCREEN_HEIGHT]);
 
   // Load theme preference and devices when screen comes into focus
   useFocusEffect(
@@ -55,11 +73,11 @@ const DashboardScreen: React.FC = () => {
       const devices = await deviceStorageService.getConfiguredDevices();
       setConfiguredDevices(devices);
       
-      // Initialize device states (you would replace this with actual Home Assistant state)
+      // Initialize device states
       const initialStates: { [key: string]: boolean } = {};
       devices.forEach(device => {
         if (device.type === 'light' || device.type === 'ac') {
-          initialStates[device.id] = false; // Default to off
+          initialStates[device.id] = false;
         }
       });
       setDeviceStates(initialStates);
@@ -72,21 +90,15 @@ const DashboardScreen: React.FC = () => {
 
   const toggleDevice = async (deviceId: string, deviceType: string) => {
     try {
-      // Update local state immediately for responsive UI
       setDeviceStates(prev => ({
         ...prev,
         [deviceId]: !prev[deviceId]
       }));
 
-      // Here you would call your Home Assistant service to toggle the device
-      // For now, we'll just simulate it
       console.log(`Toggling ${deviceType} ${deviceId} to ${!deviceStates[deviceId]}`);
       
       // TODO: Replace with actual Home Assistant API call
-      // await homeAssistantService.toggleDevice(deviceId, !deviceStates[deviceId]);
-      
     } catch (error) {
-      // Revert state on error
       setDeviceStates(prev => ({
         ...prev,
         [deviceId]: !prev[deviceId]
@@ -106,10 +118,12 @@ const DashboardScreen: React.FC = () => {
       case 'water': return '💧';
       case 'radar': return '📡';
       case 'temp_humidity': return '🌡️';
+      case 'temperature': return '🌡️';
+      case 'humidity': return '💧';
       case 'door': return '🚪';
-      case 'light': return isOn ? '💡' : '💡'; // Different icons for on/off
+      case 'light': return isOn ? '💡' : '💡';
       case 'camera': return '📹';
-      case 'ac': return isOn ? '❄️' : '⛄'; // Snowflake when on, snowman when off
+      case 'ac': return isOn ? '❄️' : '⛄';
       case 'security': return '🔒';
       default: return '📱';
     }
@@ -119,7 +133,9 @@ const DashboardScreen: React.FC = () => {
     switch (type) {
       case 'water': return 'Water Sensor';
       case 'radar': return 'Radar Sensor';
-      case 'temp_humidity': return 'Temperature & Humidity';
+      case 'temp_humidity': return 'Temp & Humidity';
+      case 'temperature': return 'Temperature';
+      case 'humidity': return 'Humidity';
       case 'door': return 'Door Sensor';
       case 'light': return 'Light';
       case 'camera': return 'Camera';
@@ -131,43 +147,56 @@ const DashboardScreen: React.FC = () => {
 
   const getStatusColor = (isOn: boolean, isDark: boolean): string => {
     if (isOn) {
-      return isDark ? '#4CAF50' : '#2E7D32'; // Green for on
+      return isDark ? '#4CAF50' : '#2E7D32';
     }
-    return isDark ? '#666' : '#999'; // Gray for off
+    return isDark ? '#666' : '#999';
   };
 
   const getStatusText = (isOn: boolean): string => {
     return isOn ? 'ON' : 'OFF';
   };
 
-  const renderDeviceCard = (device: SensorDevice) => {
+  // Filter devices by type
+  const temperatureSensors = configuredDevices.filter((device: any) => device.type === 'temperature');
+  const humiditySensors = configuredDevices.filter((device: any) => device.type === 'humidity');
+  const tempHumiditySensors = configuredDevices.filter(device => device.type === 'temp_humidity');
+  const lights = configuredDevices.filter(device => device.type === 'light');
+  const cameras = configuredDevices.filter(device => device.type === 'camera');
+  const radarSensors = configuredDevices.filter(device => device.type === 'radar');
+  const waterSensors = configuredDevices.filter(device => device.type === 'water');
+  const acs = configuredDevices.filter(device => device.type === 'ac');
+  const doorSensors = configuredDevices.filter(device => device.type === 'door');
+  const securitySensors = configuredDevices.filter(device => device.type === 'security');
+
+  const renderDeviceCard = (device: SensorDevice, itemsPerRow: number = 2) => {
     const isOn = deviceStates[device.id] || false;
     const isToggleable = device.type === 'light' || device.type === 'ac';
+    const cardWidth = getCardWidth(itemsPerRow);
     
     return (
-      <TouchableOpacity 
-        key={device.id} 
-        style={[styles.deviceCard, isDarkTheme && styles.deviceCardDark]}
-        activeOpacity={0.7}
-      >
-        <View style={styles.deviceHeader}>
-          <View style={[
-            styles.deviceIconContainer,
-            isToggleable && isOn && styles.deviceIconContainerActive,
-            { backgroundColor: isDarkTheme ? '#2a2a2a' : '#f8f9fa' }
-          ]}>
-            <Text style={[
-              styles.deviceIcon,
-              isToggleable && { color: getStatusColor(isOn, isDarkTheme) }
+      <View key={device.id} style={[styles.card, { width: cardWidth }]}>
+        <View style={[styles.deviceCard, isDarkTheme && styles.deviceCardDark]}>
+          <View style={styles.deviceHeader}>
+            <View style={[
+              styles.deviceIconContainer,
+              isToggleable && isOn && styles.deviceIconContainerActive,
+              { backgroundColor: isDarkTheme ? '#2a2a2a' : '#f8f9fa' }
             ]}>
-              {getDeviceIcon(device.type, isOn)}
-            </Text>
-          </View>
-          <View style={styles.deviceInfo}>
-            <Text style={[styles.deviceName, isDarkTheme && styles.textDark]}>{device.name}</Text>
-            <Text style={[styles.deviceType, isDarkTheme && styles.textSecondaryDark]}>
-              {getDeviceTypeLabel(device.type)}
-            </Text>
+              <Text style={[
+                styles.deviceIcon,
+                isToggleable && { color: getStatusColor(isOn, isDarkTheme) }
+              ]}>
+                {getDeviceIcon(device.type, isOn)}
+              </Text>
+            </View>
+            <View style={styles.deviceInfo}>
+              <Text style={[styles.deviceName, isDarkTheme && styles.textDark]} numberOfLines={1}>
+                {device.name}
+              </Text>
+              <Text style={[styles.deviceType, isDarkTheme && styles.textSecondaryDark]} numberOfLines={1}>
+                {getDeviceTypeLabel(device.type)}
+              </Text>
+            </View>
           </View>
           
           {isToggleable && (
@@ -191,60 +220,102 @@ const DashboardScreen: React.FC = () => {
                 trackColor={{ false: '#767577', true: isDarkTheme ? '#4CAF50' : '#81C784' }}
                 thumbColor={isOn ? (isDarkTheme ? '#4CAF50' : '#2E7D32') : (isDarkTheme ? '#aaa' : '#f4f3f4')}
                 ios_backgroundColor="#3e3e3e"
+                style={styles.switch}
               />
             </View>
           )}
-        </View>
-        
-        <View style={[styles.entityContainer, isDarkTheme && styles.entityContainerDark]}>
-          <Text style={[styles.entityLabel, isDarkTheme && styles.textSecondaryDark]}>Entity ID:</Text>
-          <Text style={[styles.entityValue, isDarkTheme && styles.textDark]}>
-            {device.entity}
-          </Text>
-        </View>
-
-        {isToggleable && (
-          <View style={styles.actionContainer}>
-            <TouchableOpacity
-              style={[
-                styles.toggleButton,
-                isOn ? styles.toggleButtonOn : styles.toggleButtonOff,
-                isDarkTheme && (isOn ? styles.toggleButtonOnDark : styles.toggleButtonOffDark)
-              ]}
-              onPress={() => toggleDevice(device.id, device.type)}
-            >
-              <Text style={[
-                styles.toggleButtonText,
-                isOn ? styles.toggleButtonTextOn : styles.toggleButtonTextOff
-              ]}>
-                {isOn ? 'Turn Off' : 'Turn On'}
-              </Text>
-            </TouchableOpacity>
+          
+          <View style={[styles.entityContainer, isDarkTheme && styles.entityContainerDark]}>
+            <Text style={[styles.entityValue, isDarkTheme && styles.textDark]} numberOfLines={1}>
+              {device.entity}
+            </Text>
           </View>
-        )}
-      </TouchableOpacity>
+
+          {isToggleable && (
+            <View style={styles.actionContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  isOn ? styles.toggleButtonOn : styles.toggleButtonOff,
+                  isDarkTheme && (isOn ? styles.toggleButtonOnDark : styles.toggleButtonOffDark)
+                ]}
+                onPress={() => toggleDevice(device.id, device.type)}
+              >
+                <Text style={[
+                  styles.toggleButtonText,
+                  isOn ? styles.toggleButtonTextOn : styles.toggleButtonTextOff
+                ]}>
+                  {isOn ? 'Turn Off' : 'Turn On'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </View>
     );
   };
 
-  const groupDevicesByType = (devices: SensorDevice[]) => {
-    const grouped: { [key: string]: SensorDevice[] } = {};
-    devices.forEach(device => {
-      if (!grouped[device.type]) {
-        grouped[device.type] = [];
-      }
-      grouped[device.type].push(device);
-    });
-    return grouped;
+  const renderCameraCard = (camera: SensorDevice) => {
+    const cardWidth = getCardWidth(2);
+    
+    return (
+      <View key={camera.id} style={[styles.card, { width: cardWidth }]}>
+        <View style={[styles.deviceCard, isDarkTheme && styles.deviceCardDark]}>
+          <View style={styles.deviceHeader}>
+            <Text style={styles.cameraIcon}>📹</Text>
+            <View style={styles.deviceInfo}>
+              <Text style={[styles.deviceName, isDarkTheme && styles.textDark]} numberOfLines={1}>
+                {camera.name}
+              </Text>
+              <Text style={[styles.deviceType, isDarkTheme && styles.textSecondaryDark]} numberOfLines={1}>
+                Camera
+              </Text>
+            </View>
+          </View>
+          <View style={[styles.cameraPreview, isDarkTheme && styles.cameraPreviewDark]}>
+            <Text style={[styles.cameraPlaceholder, isDarkTheme && styles.textSecondaryDark]}>
+              Live View
+            </Text>
+          </View>
+          <View style={[styles.entityContainer, isDarkTheme && styles.entityContainerDark]}>
+            <Text style={[styles.entityValue, isDarkTheme && styles.textDark]} numberOfLines={1}>
+              {camera.entity}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
   };
 
-  const renderDeviceSection = (type: string, devices: SensorDevice[]) => (
-    <View key={type} style={styles.section}>
-      <Text style={[styles.sectionTitle, isDarkTheme && styles.textDark]}>
-        {getDeviceIcon(type)} {getDeviceTypeLabel(type)}s ({devices.length})
-      </Text>
-      {devices.map(device => renderDeviceCard(device))}
-    </View>
-  );
+  const renderGridSection = (title: string, devices: SensorDevice[], icon: string, itemsPerRow: number = 2) => {
+    if (devices.length === 0) return null;
+
+    return (
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, isDarkTheme && styles.textDark]}>
+          {icon} {title} ({devices.length})
+        </Text>
+        <View style={[styles.grid, { gap: CARD_GAP }]}>
+          {devices.map((device) => renderDeviceCard(device, itemsPerRow))}
+        </View>
+      </View>
+    );
+  };
+
+  const renderCameraSection = (cameras: SensorDevice[]) => {
+    if (cameras.length === 0) return null;
+
+    return (
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, isDarkTheme && styles.textDark]}>
+          📹 Cameras ({cameras.length})
+        </Text>
+        <View style={[styles.grid, { gap: CARD_GAP }]}>
+          {cameras.map((camera) => renderCameraCard(camera))}
+        </View>
+      </View>
+    );
+  };
 
   if (loading) {
     return (
@@ -253,8 +324,6 @@ const DashboardScreen: React.FC = () => {
       </View>
     );
   }
-
-  const groupedDevices = groupDevicesByType(configuredDevices);
 
   return (
     <View style={[styles.container, isDarkTheme && styles.containerDark]}>
@@ -301,10 +370,38 @@ const DashboardScreen: React.FC = () => {
             />
           }
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
         >
-          {Object.entries(groupedDevices).map(([type, devices]) =>
-            renderDeviceSection(type, devices)
+          {/* Environment Sensors - Temperature & Humidity */}
+          {(temperatureSensors.length > 0 || humiditySensors.length > 0 || tempHumiditySensors.length > 0) && (
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, isDarkTheme && styles.textDark]}>
+                🌡️ Environment
+              </Text>
+              <View style={[styles.grid, { gap: CARD_GAP }]}>
+                {[...temperatureSensors, ...humiditySensors, ...tempHumiditySensors]
+                  .map((device) => renderDeviceCard(device, 2))}
+              </View>
+            </View>
           )}
+
+          {/* Lights - 2 per row */}
+          {renderGridSection('Lights', lights, '💡', 2)}
+
+          {/* Cameras - Special layout */}
+          {renderCameraSection(cameras)}
+
+          {/* Radar Sensors - 3 per row */}
+          {renderGridSection('Radar Sensors', radarSensors, '📡', 3)}
+
+          {/* Water Sensors - 4 per row */}
+          {renderGridSection('Water Sensors', waterSensors, '💧', 4)}
+
+          {/* Other devices */}
+          {renderGridSection('Air Conditioners', acs, '❄️', 2)}
+          {renderGridSection('Door Sensors', doorSensors, '🚪', 2)}
+          {renderGridSection('Security Systems', securitySensors, '🔒', 2)}
+
           <View style={styles.bottomSpacer} />
         </ScrollView>
       )}
@@ -335,7 +432,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#fff',
-    paddingHorizontal: 16,
+    paddingHorizontal: CONTAINER_PADDING,
     paddingTop: 20,
     paddingBottom: 16,
     shadowColor: '#000',
@@ -371,35 +468,41 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  scrollContent: {
+    paddingHorizontal: CONTAINER_PADDING,
+    paddingBottom: 20,
+  },
   section: {
-    marginHorizontal: 16,
-    marginBottom: 20,
+    marginBottom: 24,
     marginTop: 8,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 12,
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 16,
     color: '#333',
-    paddingHorizontal: 4,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  card: {
+    marginBottom: CARD_GAP,
   },
   deviceCard: {
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
-    marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
+    minHeight: 160,
+    flex: 1,
   },
   deviceCardDark: {
     backgroundColor: '#1e1e1e',
-    shadowColor: '#000',
     shadowOpacity: 0.3,
   },
   deviceHeader: {
@@ -408,9 +511,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   deviceIconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -420,29 +523,35 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.05 }],
   },
   deviceIcon: {
-    fontSize: 24,
+    fontSize: 20,
+  },
+  cameraIcon: {
+    fontSize: 20,
+    marginRight: 12,
   },
   deviceInfo: {
     flex: 1,
   },
   deviceName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#333',
     marginBottom: 2,
   },
   deviceType: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#666',
   },
   toggleContainer: {
-    alignItems: 'flex-end',
-    gap: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   statusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   statusDot: {
     width: 8,
@@ -453,47 +562,40 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  switch: {
+    transform: [{ scale: 0.8 }],
+  },
   entityContainer: {
     backgroundColor: '#f8f9fa',
     borderRadius: 8,
-    padding: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#007AFF',
+    padding: 10,
+    marginBottom: 12,
   },
   entityContainerDark: {
     backgroundColor: '#2a2a2a',
-    borderLeftColor: '#1565C0',
-  },
-  entityLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#666',
-    marginBottom: 4,
-    textTransform: 'uppercase',
   },
   entityValue: {
-    fontSize: 14,
+    fontSize: 11,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
     color: '#333',
   },
   actionContainer: {
-    marginTop: 12,
+    marginTop: 'auto',
   },
   toggleButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
     alignItems: 'center',
-    justifyContent: 'center',
   },
   toggleButtonOn: {
     backgroundColor: '#E8F5E8',
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: '#4CAF50',
   },
   toggleButtonOff: {
     backgroundColor: '#F5F5F5',
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: '#E0E0E0',
   },
   toggleButtonOnDark: {
@@ -505,7 +607,7 @@ const styles = StyleSheet.create({
     borderColor: '#616161',
   },
   toggleButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
   },
   toggleButtonTextOn: {
@@ -513,6 +615,23 @@ const styles = StyleSheet.create({
   },
   toggleButtonTextOff: {
     color: '#666',
+  },
+  // Camera specific styles
+  cameraPreview: {
+    height: 80,
+    backgroundColor: '#e9ecef',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  cameraPreviewDark: {
+    backgroundColor: '#2a2a2a',
+  },
+  cameraPlaceholder: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
   },
   emptyContainer: {
     flex: 1,
