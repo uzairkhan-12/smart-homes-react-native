@@ -40,7 +40,7 @@ const BinarySensorCard: React.FC<BinarySensorCardProps> = ({
 
   const getStatusColor = (isActive: boolean, isDark: boolean): string => {
     if (isActive) {
-      return isDark ? '#4CAF50' : '#2E7D32';
+      return isDark ? '#af4c4cff' : '#7d2e2eff';
     }
     return isDark ? '#666' : '#999';
   };

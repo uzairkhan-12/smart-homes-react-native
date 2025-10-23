@@ -3,7 +3,6 @@ import React from 'react';
 import { View } from 'react-native';
 
 import UniversalFooter from '@/components/ui/UniversalFooter';
-import UniversalHeader from '@/components/ui/UniversalHeader';
 import { useAuth } from '@/context/AuthContext';
 
 export default function TabLayout() {
@@ -11,7 +10,6 @@ export default function TabLayout() {
 
   return (
     <View style={{ flex: 1 }}>
-      {isAuthenticated && <UniversalHeader />}
       <Tabs
         screenOptions={{
           tabBarStyle: { display: 'none' },

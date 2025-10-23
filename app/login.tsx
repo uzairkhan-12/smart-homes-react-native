@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     Alert,
     Image,
+    Keyboard,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -11,17 +12,16 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import UniversalFooter from '@/components/ui/UniversalFooter';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 
-// Indigo palette for consistent coloring
+// Indigo palette
 const INDIGO = {
-  50:  '#EEF2FF',
+  50: '#EEF2FF',
   100: '#E0E7FF',
   200: '#C7D2FE',
   300: '#A5B4FC',
@@ -39,7 +39,21 @@ export default function LoginScreen() {
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const inputs = useRef<(TextInput | null)[]>([]);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () =>
+      setKeyboardVisible(true)
+    );
+    const hideSub = Keyboard.addListener('keyboardDidHide', () =>
+      setKeyboardVisible(false)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const handleCodeChange = (text: string, index: number) => {
     const newCode = [...code];
@@ -48,6 +62,11 @@ export default function LoginScreen() {
 
     if (text && index < 5) {
       inputs.current[index + 1]?.focus();
+    }
+
+    if (index === 5 && text) {
+      Keyboard.dismiss();
+      setTimeout(handleLogin, 100);
     }
   };
 
@@ -78,32 +97,24 @@ export default function LoginScreen() {
     }
   };
 
-  const toggleTheme = () => {
-    if (isDark) {
-      setTheme('light');
-    } else {
-      setTheme('dark');
-    }
-  };
+  const toggleTheme = () => setTheme(isDark ? 'light' : 'dark');
 
-  const isCodeComplete = code.every(digit => digit !== '') && !isLoading;
+  const isCodeComplete = code.every((digit) => digit !== '') && !isLoading;
 
   const styles = StyleSheet.create({
-    container: { 
-      flex: 1, 
-      backgroundColor: isDark ? '#121212' : '#f5f5f5' 
+    container: {
+      flex: 1,
+      backgroundColor: isDark ? '#121212' : '#f5f5f5',
     },
     themeToggleContainer: {
       position: 'absolute',
       top: 50,
       right: 20,
       zIndex: 1000,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
     },
+    // Remove the content paddingBottom since footer is now properly positioned
     content: {
-      flex: 1,
+      flexGrow: 1,
       justifyContent: 'center',
       paddingHorizontal: 20,
     },
@@ -112,8 +123,8 @@ export default function LoginScreen() {
       marginBottom: 32,
     },
     logoImage: {
-      width: 120,
-      height: 80,
+      width: 160,
+      height: 120,
     },
     title: {
       fontSize: 32,
@@ -199,43 +210,82 @@ export default function LoginScreen() {
       lineHeight: 20,
     },
     themeToggle: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
       padding: 8,
       borderRadius: 8,
       backgroundColor: isDark ? '#2a2a2a' : '#f0f0f0',
     },
+    // Improved footer styling
+    footerContainer: {
+      width: '100%',
+      backgroundColor: isDark ? '#1a1a1a' : '#f8f9fa',
+      borderTopWidth: 1,
+      borderTopColor: isDark ? '#374151' : '#e5e7eb',
+      paddingVertical: 16,
+      paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: -2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 6,
+      elevation: 10,
+    },
+    footerTextRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    footerText: {
+      fontSize: 16,
+      color: isDark ? '#9ca3af' : '#6b7280',
+      fontWeight: '500',
+    },
+    footerHeart: {
+      color: '#e63946',
+      marginHorizontal: 6,
+      fontSize: 18,
+    },
+    footerLogo: {
+      width: 50,
+      height: 50,
+      resizeMode: 'contain',
+      marginLeft: 6,
+    },
   });
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         {/* Floating Theme Toggle */}
         <View style={styles.themeToggleContainer}>
-          <TouchableOpacity 
-            style={styles.themeToggle} 
+          <TouchableOpacity
+            style={styles.themeToggle}
             onPress={toggleTheme}
             activeOpacity={0.7}
           >
             <Ionicons
-              name={isDark ? "moon" : "sunny"}
+              name={isDark ? 'moon' : 'sunny'}
               size={20}
-              color={isDark ? "#ffd700" : "#ff8c00"}
+              color={isDark ? '#ffd700' : '#ff8c00'}
             />
           </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={{ flex: 1 }}>
-          <View style={styles.content}>
+        <View style={{ flex: 1 }}>
+          <ScrollView
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+            contentInsetAdjustmentBehavior="automatic"
+            showsVerticalScrollIndicator={false}
+          >
             <View style={styles.logoContainer}>
-              <Image 
-                source={isDark
-                  ? require('../assets/images/dbf-white.png')
-                  : require('../assets/images/dbf-black.png')
+              <Image
+                source={
+                  isDark
+                    ? require('../assets/images/dbf-white.png')
+                    : require('../assets/images/dbf-black.png')
                 }
                 style={styles.logoImage}
                 resizeMode="contain"
@@ -243,11 +293,8 @@ export default function LoginScreen() {
             </View>
 
             <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>
-              Enter your 6-digit access code
-            </Text>
+            <Text style={styles.subtitle}>Enter your 6-digit access code</Text>
 
-            {/* 6-Digit Code Input */}
             <View style={styles.codeContainer}>
               <View style={styles.inputGroup}>
                 {[0, 1, 2].map((index) => (
@@ -315,10 +362,28 @@ export default function LoginScreen() {
               Can't access your account?{'\n'}
               Contact support for assistance
             </Text>
-          </View>
-        </ScrollView>
+          </ScrollView>
+
+          {/* ✅ Improved Sticky Footer */}
+          {!keyboardVisible && (
+            <View style={styles.footerContainer}>
+              <View style={styles.footerTextRow}>
+                <Text style={styles.footerText}>Made with</Text>
+                <Text style={styles.footerHeart}>♥</Text>
+                <Text style={styles.footerText}>by</Text>
+                <Image
+                  source={
+                    isDark
+                      ? require('../assets/images/whitelogo.png')
+                      : require('../assets/images/PMLogo.png')
+                  }
+                  style={styles.footerLogo}
+                />
+              </View>
+            </View>
+          )}
+        </View>
       </KeyboardAvoidingView>
-      <UniversalFooter />
     </SafeAreaView>
   );
 }

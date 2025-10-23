@@ -35,7 +35,11 @@ const AcCard: React.FC<AcCardProps> = ({
   };
 
   return (
-    <View style={[styles.card, { width: cardWidth }]}>
+    <TouchableOpacity 
+      style={[styles.card, { width: cardWidth }]}
+      onPress={() => onToggle(device.id, device.type, device.entity)}
+      activeOpacity={0.7}
+    >
       <View style={[styles.controlCard, isDarkTheme && styles.controlCardDark]}>
         <View style={styles.controlHeader}>
           <View style={[
@@ -67,7 +71,10 @@ const AcCard: React.FC<AcCardProps> = ({
             {isOn && (
               <TouchableOpacity
                 style={[styles.settingsButton, isDarkTheme && styles.settingsButtonDark]}
-                onPress={() => onOpenSettings(device)}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  onOpenSettings(device);
+                }}
               >
                 <Ionicons 
                   name="settings-outline" 
@@ -88,23 +95,8 @@ const AcCard: React.FC<AcCardProps> = ({
             </View>
           </View>
         </View>
-        
-        {/* Status Indicator */}
-        <View style={styles.statusIndicator}>
-          <View style={[
-            styles.statusDot,
-            { backgroundColor: getStatusColor(isOn, isDarkTheme) }
-          ]} />
-          <Text style={[
-            styles.statusText,
-            isDarkTheme && styles.textDark,
-            { color: getStatusColor(isOn, isDarkTheme) }
-          ]}>
-            {isOn ? (acData?.new_state.toUpperCase() || 'ON') : 'OFF'}
-          </Text>
-        </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 
@@ -121,7 +113,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
-    minHeight: 120,
+    minHeight: 80,
     flex: 1,
   },
   controlCardDark: {
@@ -131,7 +123,6 @@ const styles = StyleSheet.create({
   controlHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
   },
   controlIconContainer: {
     width: 44,
@@ -183,20 +174,6 @@ const styles = StyleSheet.create({
   },
   settingsButtonDark: {
     backgroundColor: '#2a2a2a',
-  },
-  statusIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
   },
   textDark: {
     color: '#fff',

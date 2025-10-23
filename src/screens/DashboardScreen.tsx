@@ -1,4 +1,6 @@
-import { AcCard, AcSettingsModal, BinarySensorCard, CameraCard, DeviceSection, LightCard, TempHumidityCard } from '@/components';
+import { AcCard, AcSettingsModal, BinarySensorCard, CameraCard, DeviceSection, LightCard } from '@/components';
+import DashboardHeader from '@/components/ui/DashboardHeader';
+import TempHumidityDetailsModal from '@/components/ui/TempHumidityDetailsModal';
 import { useTheme } from '@/context/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
@@ -34,12 +36,17 @@ const DashboardScreen: React.FC = () => {
   
   const [acModalVisible, setAcModalVisible] = useState(false);
   const [selectedAc, setSelectedAc] = useState<SensorDevice | null>(null);
+  const [tempHumidityModalVisible, setTempHumidityModalVisible] = useState(false);
+  const [avgTemperature, setAvgTemperature] = useState<number>(0);
+  const [avgHumidity, setAvgHumidity] = useState<number>(0);
 
   // Calculate responsive card widths based on current screen dimensions
   const getCardWidth = (itemsPerRow: number) => {
-    const totalGap = CARD_GAP * (itemsPerRow - 1);
+    // Use the exact itemsPerRow for water sensors (4), otherwise add 1 for landscape optimization
+    const adjustedItemsPerRow = itemsPerRow === 4 ? 4 : Math.min(itemsPerRow + 1, 4);
+    const totalGap = CARD_GAP * (adjustedItemsPerRow - 1);
     const availableWidth = SCREEN_WIDTH - (CONTAINER_PADDING * 2) - totalGap;
-    return availableWidth / itemsPerRow;
+    return availableWidth / adjustedItemsPerRow;
   };
 
   // Load theme preference and devices when screen comes into focus
@@ -49,6 +56,49 @@ const DashboardScreen: React.FC = () => {
       loadEntityData();
     }, [])
   );
+
+  // Calculate averages whenever sensor data changes
+  React.useEffect(() => {
+    calculateAverages();
+  }, [sensorData, configuredDevices]);
+
+  const calculateAverages = () => {
+    const tempHumidityDevices = configuredDevices.filter(device => device.type === 'temp_humidity');
+    
+    if (tempHumidityDevices.length === 0) {
+      setAvgTemperature(0);
+      setAvgHumidity(0);
+      return;
+    }
+
+    let totalTemp = 0;
+    let totalHumidity = 0;
+    let tempCount = 0;
+    let humidityCount = 0;
+
+    tempHumidityDevices.forEach(device => {
+      const deviceData = getDeviceData(device);
+      if (deviceData.type === 'sensor' && deviceData.data) {
+        const data = deviceData.data as SensorData;
+        const value = parseFloat(data.new_state);
+        
+        if (!isNaN(value)) {
+          if (device.entity.includes('temperature') || device.entity.includes('temp')) {
+            totalTemp += value;
+            tempCount++;
+          } else if (device.entity.includes('humidity')) {
+            totalHumidity += value;
+            humidityCount++;
+          }
+        }
+      }
+    });
+
+    setAvgTemperature(tempCount > 0 ? totalTemp / tempCount : 0);
+    setAvgHumidity(humidityCount > 0 ? totalHumidity / humidityCount : 0);
+  };
+
+
 
   const loadConfiguredDevices = async () => {
     try {
@@ -486,37 +536,7 @@ const DashboardScreen: React.FC = () => {
     return { isActive: false, stateText: 'No Data' };
   };
 
-  // Find matching temperature and humidity sensors for a device
-  const getTempHumidityData = (device: SensorDevice): { temperature: SensorData | null; humidity: SensorData | null } => {
-    const deviceData = getDeviceData(device);
-    
-    if (deviceData.type !== 'sensor' || !deviceData.data) {
-      return { temperature: null, humidity: null };
-    }
 
-    const tempData = deviceData.data as SensorData;
-    let humidityData = null;
-
-    // Try to find matching humidity sensor
-    if (device.entity.includes('temperature')) {
-      const humidityEntity = device.entity.replace('temperature', 'humidity');
-      const humidityDeviceData = getDeviceData({ ...device, entity: humidityEntity });
-      if (humidityDeviceData.type === 'sensor' && humidityDeviceData.data) {
-        humidityData = humidityDeviceData.data as SensorData;
-      }
-    } else if (device.entity.includes('temp')) {
-      const humidityEntity = device.entity.replace('temp', 'humidity');
-      const humidityDeviceData = getDeviceData({ ...device, entity: humidityEntity });
-      if (humidityDeviceData.type === 'sensor' && humidityDeviceData.data) {
-        humidityData = humidityDeviceData.data as SensorData;
-      }
-    }
-
-    return {
-      temperature: tempData,
-      humidity: humidityData
-    };
-  };
 
   // Helper function to get section configuration
   const getSectionConfig = (type: string) => {
@@ -544,6 +564,11 @@ const DashboardScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, isDarkTheme && styles.containerDark]}>
+      <DashboardHeader
+        avgTemperature={avgTemperature}
+        avgHumidity={avgHumidity}
+        onTempHumidityDetailsPress={() => setTempHumidityModalVisible(true)}
+      />
 
       {configuredDevices.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -567,49 +592,24 @@ const DashboardScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          {/* Temperature & Humidity Sensors */}
-          {(() => {
-            const devices = configuredDevices.filter(device => device.type === 'temp_humidity');
-            if (devices.length === 0) return null;
-            const { title, icon } = getSectionConfig('temp_humidity');
-            
-            return (
-              <DeviceSection
-                title={title}
-                devices={devices}
-                icon={icon}
-                itemsPerRow={2}
-              >
-                {devices.map(device => {
-                  const { temperature, humidity } = getTempHumidityData(device);
-                  return (
-                    <TempHumidityCard
-                      key={device.id}
-                      device={device}
-                      temperature={temperature}
-                      humidity={humidity}
-                      cardWidth={getCardWidth(2)}
-                    />
-                  );
-                })}
-              </DeviceSection>
-            );
-          })()}
 
-          {/* Control Section - Lights */}
+
+          {/* Control Section - Lights & AC */}
           {(() => {
-            const devices = configuredDevices.filter(device => device.type === 'light');
-            if (devices.length === 0) return null;
-            const { title, icon } = getSectionConfig('light');
+            const lightDevices = configuredDevices.filter(device => device.type === 'light');
+            const acDevices = configuredDevices.filter(device => device.type === 'ac');
+            const allControlDevices = [...lightDevices, ...acDevices];
+            
+            if (allControlDevices.length === 0) return null;
             
             return (
               <DeviceSection
-                title={title}
-                devices={devices}
-                icon={icon}
-                itemsPerRow={2}
+                title="Controls"
+                devices={allControlDevices}
+                icon="🎛️"
+                itemsPerRow={3}
               >
-                {devices.map(device => {
+                {lightDevices.map(device => {
                   const deviceData = getDeviceData(device);
                   const isOn = deviceData.type === 'light' && deviceData.data ? 
                     (deviceData.data as LightData).new_state === 'on' : false;
@@ -620,28 +620,11 @@ const DashboardScreen: React.FC = () => {
                       device={device}
                       isOn={isOn}
                       onToggle={toggleDevice}
-                      cardWidth={getCardWidth(2)}
+                      cardWidth={getCardWidth(3)}
                     />
                   );
                 })}
-              </DeviceSection>
-            );
-          })()}
-
-          {/* Control Section - AC */}
-          {(() => {
-            const devices = configuredDevices.filter(device => device.type === 'ac');
-            if (devices.length === 0) return null;
-            const { title, icon } = getSectionConfig('ac');
-            
-            return (
-              <DeviceSection
-                title={title}
-                devices={devices}
-                icon={icon}
-                itemsPerRow={2}
-              >
-                {devices.map(device => {
+                {acDevices.map(device => {
                   const deviceData = getDeviceData(device);
                   const isOn = deviceData.type === 'climate' && deviceData.data ? 
                     (deviceData.data as ClimateData).new_state !== 'off' : false;
@@ -655,7 +638,7 @@ const DashboardScreen: React.FC = () => {
                       acData={acData}
                       onToggle={toggleDevice}
                       onOpenSettings={openAcSettings}
-                      cardWidth={getCardWidth(2)}
+                      cardWidth={getCardWidth(3)}
                     />
                   );
                 })}
@@ -668,6 +651,9 @@ const DashboardScreen: React.FC = () => {
             const devices = configuredDevices.filter(device => device.type === sensorType);
             if (devices.length === 0) return null;
             const { title, icon } = getSectionConfig(sensorType);
+            
+            // Show 4 water sensors in one row, others show 2 per row
+            const itemsPerRow = sensorType === 'water' ? 4 : 2;
 
             return (
               <DeviceSection
@@ -675,7 +661,7 @@ const DashboardScreen: React.FC = () => {
                 title={title}
                 devices={devices}
                 icon={icon}
-                itemsPerRow={2}
+                itemsPerRow={itemsPerRow}
               >
                 {devices.map(device => {
                   const { isActive, stateText } = getBinarySensorState(device);
@@ -685,7 +671,7 @@ const DashboardScreen: React.FC = () => {
                       device={device}
                       isActive={isActive}
                       stateText={stateText}
-                      cardWidth={getCardWidth(2)}
+                      cardWidth={getCardWidth(itemsPerRow)}
                     />
                   );
                 })}
@@ -787,6 +773,14 @@ const DashboardScreen: React.FC = () => {
         visible={acModalVisible}
         selectedAc={selectedAc}
         onClose={closeAcSettings}
+      />
+
+      {/* Temperature & Humidity Details Modal */}
+      <TempHumidityDetailsModal
+        visible={tempHumidityModalVisible}
+        tempHumidityDevices={configuredDevices.filter(device => device.type === 'temp_humidity')}
+        sensorData={sensorData}
+        onClose={() => setTempHumidityModalVisible(false)}
       />
     </View>
   );

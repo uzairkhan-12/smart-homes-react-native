@@ -14,7 +14,7 @@ class DeviceStorageService {
         entity: '',
         type: 'water' as const
       })),
-      radarSensors: Array.from({ length: 3 }, (_, i) => ({
+      radarSensors: Array.from({ length: 4 }, (_, i) => ({
         id: `radar_${i + 1}`,
         name: `Radar Sensor ${i + 1}`,
         entity: '',

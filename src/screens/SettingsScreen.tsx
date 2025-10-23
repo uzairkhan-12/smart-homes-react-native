@@ -1,3 +1,4 @@
+import SettingsHeader from '@/components/ui/SettingsHeader';
 import { useTheme } from '@/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -266,7 +267,8 @@ const SettingsScreen: React.FC = () => {
       style={[styles.container, isDarkTheme && styles.containerDark]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-            <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <SettingsHeader />
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Quick Actions */}
         <View style={[styles.header, isDarkTheme && styles.headerDark]}>
           <View style={styles.quickActions}>

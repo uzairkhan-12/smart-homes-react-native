@@ -1,7 +1,7 @@
 import { useTheme } from '@/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { StyleSheet, Switch, Text, View } from 'react-native';
+import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { SensorDevice } from '../../types';
 
 interface LightCardProps {
@@ -27,7 +27,11 @@ const LightCard: React.FC<LightCardProps> = ({
   };
 
   return (
-    <View style={[styles.card, { width: cardWidth }]}>
+    <TouchableOpacity 
+      style={[styles.card, { width: cardWidth }]}
+      onPress={() => onToggle(device.id, device.type, device.entity)}
+      activeOpacity={0.7}
+    >
       <View style={[styles.controlCard, isDarkTheme && styles.controlCardDark]}>
         <View style={styles.controlHeader}>
           <View style={[
@@ -60,23 +64,8 @@ const LightCard: React.FC<LightCardProps> = ({
             />
           </View>
         </View>
-        
-        {/* Status Indicator */}
-        <View style={styles.statusIndicator}>
-          <View style={[
-            styles.statusDot,
-            { backgroundColor: getStatusColor(isOn, isDarkTheme) }
-          ]} />
-          <Text style={[
-            styles.statusText,
-            isDarkTheme && styles.textDark,
-            { color: getStatusColor(isOn, isDarkTheme) }
-          ]}>
-            {isOn ? 'ON' : 'OFF'}
-          </Text>
-        </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 
@@ -93,7 +82,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
-    minHeight: 120,
+    minHeight: 80,
     flex: 1,
   },
   controlCardDark: {
@@ -103,7 +92,6 @@ const styles = StyleSheet.create({
   controlHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
   },
   controlIconContainer: {
     width: 44,
@@ -134,20 +122,6 @@ const styles = StyleSheet.create({
   },
   controlSwitch: {
     transform: [{ scale: 1.1 }],
-  },
-  statusIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
   },
   textDark: {
     color: '#fff',
