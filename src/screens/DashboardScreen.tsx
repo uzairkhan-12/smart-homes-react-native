@@ -1,98 +1,30 @@
-import { Ionicons } from '@expo/vector-icons';
+import { AcCard, AcSettingsModal, BinarySensorCard, CameraCard, DeviceSection, LightCard, TempHumidityCard } from '@/components';
+import { useTheme } from '@/context/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useState } from 'react';
 import {
   Alert,
-  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
-  TouchableOpacity,
   View,
   useWindowDimensions
 } from 'react-native';
+import { BinarySensorData, ClimateData, LightData, SensorData, SensorDevice } from '../../types';
 import { deviceStorageService } from '../services/DeviceStorageService';
-import { SensorDevice } from '../types';
+
+// Import components
 
 const CONTAINER_PADDING = 16;
 const CARD_GAP = 12;
 
-// Define types for different entity data
-interface BinarySensorData {
-  entity_id: string;
-  old_state: string;
-  new_state: string;
-  user_id: string | null;
-  timestamp: string;
-  attributes: {
-    device_class: string;
-    icon?: string;
-    friendly_name: string;
-  };
-}
-
-interface ClimateData {
-  entity_id: string;
-  old_state: string;
-  new_state: string;
-  user_id: string | null;
-  timestamp: string;
-  attributes: {
-    hvac_modes: string[];
-    min_temp: number;
-    max_temp: number;
-    target_temp_step: number;
-    fan_modes: string[];
-    current_temperature: number | null;
-    temperature: number;
-    fan_mode: string;
-    last_on_operation: string;
-    device_code: number;
-    manufacturer: string;
-    supported_models: string[];
-    supported_controller: string;
-    commands_encoding: string;
-    friendly_name: string;
-    supported_features: number;
-  };
-}
-
-interface LightData {
-  entity_id: string;
-  old_state: string;
-  new_state: string;
-  user_id: string | null;
-  timestamp: string;
-  attributes: {
-    supported_color_modes: string[];
-    color_mode: string;
-    friendly_name: string;
-    supported_features: number;
-  };
-}
-
-interface SensorData {
-  entity_id: string;
-  old_state: string;
-  new_state: string;
-  user_id: string | null;
-  timestamp: string;
-  attributes: {
-    state_class: string;
-    unit_of_measurement: string;
-    device_class: string;
-    friendly_name: string;
-  };
-}
-
 const DashboardScreen: React.FC = () => {
-  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = useWindowDimensions();
+  const { width: SCREEN_WIDTH } = useWindowDimensions();
+  const { isDark: isDarkTheme } = useTheme();
   const [configuredDevices, setConfiguredDevices] = useState<SensorDevice[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [isDarkTheme, setIsDarkTheme] = useState(false);
   
   // Separate states for different entity types
   const [binarySensorData, setBinarySensorData] = useState<{ [key: string]: BinarySensorData }>({});
@@ -113,30 +45,10 @@ const DashboardScreen: React.FC = () => {
   // Load theme preference and devices when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      loadThemePreference();
       loadConfiguredDevices();
       loadEntityData();
     }, [])
   );
-
-  const loadThemePreference = async () => {
-    try {
-      const theme = await deviceStorageService.loadThemePreference();
-      setIsDarkTheme(theme === 'dark');
-    } catch (error) {
-      console.error('Failed to load theme preference');
-    }
-  };
-
-  const toggleTheme = async () => {
-    const newTheme = !isDarkTheme;
-    setIsDarkTheme(newTheme);
-    try {
-      await deviceStorageService.saveThemePreference(newTheme ? 'dark' : 'light');
-    } catch (error) {
-      console.error('Failed to save theme preference');
-    }
-  };
 
   const loadConfiguredDevices = async () => {
     try {
@@ -225,8 +137,8 @@ const DashboardScreen: React.FC = () => {
         },
         'binary_sensor.frontdoor_1_person_occupancy': {
           entity_id: 'binary_sensor.frontdoor_1_person_occupancy',
-          old_state: 'on',
-          new_state: 'off',
+          old_state: 'off',
+          new_state: 'on',
           user_id: null,
           timestamp: '2025-10-21T16:01:02.946201+00:00',
           attributes: {
@@ -499,55 +411,13 @@ const DashboardScreen: React.FC = () => {
     setRefreshing(false);
   };
 
-  const getDeviceIcon = (type: string, isActive: boolean = false): string => {
-    switch (type) {
-      case 'water': return '💧';
-      case 'radar': return '📡';
-      case 'temp_humidity': return '🌡️';
-      case 'temperature': return '🌡️';
-      case 'humidity': return '💧';
-      case 'door': return '🚪';
-      case 'light': return isActive ? '💡' : '💡';
-      case 'camera': return '📹';
-      case 'ac': return isActive ? '❄️' : '⛄';
-      case 'security': return '🔒';
-      default: return '📱';
-    }
-  };
-
-  const getDeviceTypeLabel = (type: string): string => {
-    switch (type) {
-      case 'water': return 'Water Sensor';
-      case 'radar': return 'Radar Sensor';
-      case 'temp_humidity': return 'Temperature & Humidity';
-      case 'temperature': return 'Temperature';
-      case 'humidity': return 'Humidity';
-      case 'door': return 'Door Sensor';
-      case 'light': return 'Light';
-      case 'camera': return 'Camera';
-      case 'ac': return 'Air Conditioner';
-      case 'security': return 'Security System';
-      default: return 'Unknown Device';
-    }
-  };
-
-  const getStatusColor = (isActive: boolean, isDark: boolean): string => {
-    console.log('isActive:', isActive, 'isDark:', isDark);
-    if (isActive) {
-      return isDark ? '#4CAF50' : '#2E7D32'; // Green for active
-    }
-    return isDark ? '#666' : '#999'; // Gray for inactive
-  };
-
   const getBinarySensorState = (device: SensorDevice): { isActive: boolean; stateText: string } => {
     const deviceData = getDeviceData(device);
-    console.log('Device Data for', device.name, ':', deviceData);
     
     // Check if we have binary sensor data
     if (deviceData.type === 'binary' && deviceData.data) {
       const binaryData = deviceData.data as BinarySensorData;
       const isActive = binaryData.new_state === 'on';
-      console.log('Binary Sensor State:', binaryData.new_state, 'isActive:', isActive);
       
       // Determine state text based on device type and state
       switch (device.type) {
@@ -583,7 +453,6 @@ const DashboardScreen: React.FC = () => {
     const directData = binarySensorData[device.entity];
     if (directData) {
       const isActive = directData.new_state === 'on';
-      console.log('Direct Binary Sensor Data:', directData.new_state, 'isActive:', isActive);
       
       switch (device.type) {
         case 'water':
@@ -614,12 +483,11 @@ const DashboardScreen: React.FC = () => {
       }
     }
     
-    console.log('No binary sensor data found for', device.entity);
     return { isActive: false, stateText: 'No Data' };
   };
 
   // Find matching temperature and humidity sensors for a device
-  const getTempHumidityData = (device: SensorDevice): { temperature: any; humidity: any } => {
+  const getTempHumidityData = (device: SensorDevice): { temperature: SensorData | null; humidity: SensorData | null } => {
     const deviceData = getDeviceData(device);
     
     if (deviceData.type !== 'sensor' || !deviceData.data) {
@@ -634,13 +502,13 @@ const DashboardScreen: React.FC = () => {
       const humidityEntity = device.entity.replace('temperature', 'humidity');
       const humidityDeviceData = getDeviceData({ ...device, entity: humidityEntity });
       if (humidityDeviceData.type === 'sensor' && humidityDeviceData.data) {
-        humidityData = humidityDeviceData.data;
+        humidityData = humidityDeviceData.data as SensorData;
       }
     } else if (device.entity.includes('temp')) {
       const humidityEntity = device.entity.replace('temp', 'humidity');
       const humidityDeviceData = getDeviceData({ ...device, entity: humidityEntity });
       if (humidityDeviceData.type === 'sensor' && humidityDeviceData.data) {
-        humidityData = humidityDeviceData.data;
+        humidityData = humidityDeviceData.data as SensorData;
       }
     }
 
@@ -650,489 +518,20 @@ const DashboardScreen: React.FC = () => {
     };
   };
 
-  const renderTempHumidityCard = (device: SensorDevice) => {
-    const cardWidth = getCardWidth(2);
-    const { temperature, humidity } = getTempHumidityData(device);
+  // Helper function to get section configuration
+  const getSectionConfig = (type: string) => {
+    const configs: { [key: string]: { title: string; icon: string } } = {
+      'temp_humidity': { title: 'Temperature & Humidity', icon: '🌡️' },
+      'light': { title: 'Lights Control', icon: '💡' },
+      'ac': { title: 'Air Conditioners', icon: '❄️' },
+      'water': { title: 'Water Sensors', icon: '💧' },
+      'radar': { title: 'Radar Sensors', icon: '📡' },
+      'door': { title: 'Door Sensors', icon: '🚪' },
+      'security': { title: 'Security Systems', icon: '🔒' },
+      'camera': { title: 'Cameras', icon: '📹' }
+    };
     
-    return (
-      <View key={device.id} style={[styles.card, { width: cardWidth }]}>
-        <View style={[styles.deviceCard, isDarkTheme && styles.deviceCardDark]}>
-          <View style={styles.deviceHeader}>
-            <View style={[
-              styles.deviceIconContainer,
-              { backgroundColor: isDarkTheme ? '#2a2a2a' : '#f8f9fa' }
-            ]}>
-              <Text style={styles.deviceIcon}>
-                {getDeviceIcon(device.type)}
-              </Text>
-            </View>
-            <View style={styles.deviceInfo}>
-              <Text style={[styles.deviceName, isDarkTheme && styles.textDark]} numberOfLines={1}>
-                {device.name}
-              </Text>
-              <Text style={[styles.deviceType, isDarkTheme && styles.textSecondaryDark]} numberOfLines={1}>
-                {getDeviceTypeLabel(device.type)}
-              </Text>
-            </View>
-          </View>
-          
-          {/* Temperature and Humidity Display */}
-          <View style={styles.tempHumidityContainer}>
-            {/* Temperature */}
-            <View style={styles.valueContainer}>
-              <View style={styles.valueRow}>
-                <Text style={styles.valueLabel}>🌡️ Temp</Text>
-                <Text style={[
-                  styles.value,
-                  { 
-                    color: temperature ? '#4FC3F7' : (isDarkTheme ? '#aaa' : '#666')
-                  }
-                ]}>
-                  {temperature ? `${parseFloat(temperature.new_state).toFixed(1)}°` : '--'}
-                </Text>
-              </View>
-              <View style={[
-                styles.valueBar,
-                { backgroundColor: isDarkTheme ? '#333' : '#e0e0e0' }
-              ]}>
-                <View 
-                  style={[
-                    styles.valueFill,
-                    { 
-                      backgroundColor: '#4FC3F7',
-                      width: temperature ? `${Math.min((parseFloat(temperature.new_state) - 10) / 30 * 100, 100)}%` : '0%'
-                    }
-                  ]} 
-                />
-              </View>
-            </View>
-
-            {/* Humidity */}
-            <View style={styles.valueContainer}>
-              <View style={styles.valueRow}>
-                <Text style={styles.valueLabel}>💧 Humidity</Text>
-                <Text style={[
-                  styles.value,
-                  { 
-                    color: humidity ? '#66BB6A' : (isDarkTheme ? '#aaa' : '#666')
-                  }
-                ]}>
-                  {humidity ? `${parseFloat(humidity.new_state).toFixed(0)}%` : '--'}
-                </Text>
-              </View>
-              <View style={[
-                styles.valueBar,
-                { backgroundColor: isDarkTheme ? '#333' : '#e0e0e0' }
-              ]}>
-                <View 
-                  style={[
-                    styles.valueFill,
-                    { 
-                      backgroundColor: '#66BB6A',
-                      width: humidity ? `${Math.min(parseFloat(humidity.new_state), 100)}%` : '0%'
-                    }
-                  ]} 
-                />
-              </View>
-            </View>
-          </View>
-
-          {/* Last Updated */}
-          <View style={styles.lastUpdated}>
-            <Text style={[styles.lastUpdatedText, isDarkTheme && styles.textSecondaryDark]}>
-              {temperature || humidity ? 'Updated now' : 'No data'}
-            </Text>
-          </View>
-        </View>
-      </View>
-    );
-  };
-
-  const renderBinarySensorCard = (device: SensorDevice) => {
-    const cardWidth = getCardWidth(2);
-    console.log('Rendering Binary Sensor Card for', device);
-    const { isActive, stateText } = getBinarySensorState(device);
-    
-    return (
-      <View key={device.id} style={[styles.card, { width: cardWidth }]}>
-        <View style={[styles.sensorCard, isDarkTheme && styles.sensorCardDark]}>
-          <View style={styles.sensorHeader}>
-            <View style={[
-              styles.sensorIconContainer,
-              isActive && styles.sensorIconContainerActive,
-              { backgroundColor: isDarkTheme ? '#2a2a2a' : '#f8f9fa' }
-            ]}>
-              <Text style={[
-                styles.sensorIcon,
-                { color: getStatusColor(isActive, isDarkTheme) }
-              ]}>
-                {getDeviceIcon(device.type)}
-              </Text>
-            </View>
-            <View style={styles.sensorInfo}>
-              <Text style={[styles.sensorName, isDarkTheme && styles.textDark]} numberOfLines={1}>
-                {device.name}
-              </Text>
-              <Text style={[styles.sensorType, isDarkTheme && styles.textSecondaryDark]} numberOfLines={1}>
-                {getDeviceTypeLabel(device.type)}
-              </Text>
-            </View>
-          </View>
-          
-          {/* State Display */}
-          <View style={styles.stateContainer}>
-            <View style={styles.stateIndicator}>
-              <View style={[
-                styles.stateDot,
-                { backgroundColor: getStatusColor(isActive, isDarkTheme) }
-              ]} />
-              <Text style={[
-                styles.stateText,
-                isDarkTheme && styles.textDark,
-                { color: getStatusColor(isActive, isDarkTheme) }
-              ]}>
-                {stateText}
-              </Text>
-            </View>
-          </View>
-        </View>
-      </View>
-    );
-  };
-
-  const renderLightCard = (device: SensorDevice) => {
-    const cardWidth = getCardWidth(2);
-    const deviceData = getDeviceData(device);
-    const isOn = deviceData.type === 'light' && deviceData.data ? (deviceData.data as LightData).new_state === 'on' : false;
-    
-    return (
-      <View key={device.id} style={[styles.card, { width: cardWidth }]}>
-        <View style={[styles.controlCard, isDarkTheme && styles.controlCardDark]}>
-          <View style={styles.controlHeader}>
-            <View style={[
-              styles.controlIconContainer,
-              isOn && styles.controlIconContainerActive,
-              { backgroundColor: isDarkTheme ? '#2a2a2a' : '#f8f9fa' }
-            ]}>
-              <Ionicons
-                name={isOn ? "bulb" : "bulb-outline"}
-                size={24}
-                color={isOn ? (isDarkTheme ? '#FFD700' : '#FFA000') : (isDarkTheme ? '#666' : '#999')}
-              />
-            </View>
-            <View style={styles.controlInfo}>
-              <Text style={[styles.controlName, isDarkTheme && styles.textDark]} numberOfLines={1}>
-                {device.name}
-              </Text>
-              <Text style={[styles.controlType, isDarkTheme && styles.textSecondaryDark]} numberOfLines={1}>
-                {getDeviceTypeLabel(device.type)}
-              </Text>
-            </View>
-            <View style={styles.toggleWrapper}>
-              <Switch
-                value={isOn}
-                onValueChange={() => toggleDevice(device.id, device.type, device.entity)}
-                trackColor={{ false: '#767577', true: isDarkTheme ? '#4CAF50' : '#81C784' }}
-                thumbColor={isOn ? (isDarkTheme ? '#4CAF50' : '#2E7D32') : (isDarkTheme ? '#aaa' : '#f4f3f4')}
-                ios_backgroundColor="#3e3e3e"
-                style={styles.controlSwitch}
-              />
-            </View>
-          </View>
-          
-          {/* Status Indicator */}
-          <View style={styles.statusIndicator}>
-            <View style={[
-              styles.statusDot,
-              { backgroundColor: getStatusColor(isOn, isDarkTheme) }
-            ]} />
-            <Text style={[
-              styles.statusText,
-              isDarkTheme && styles.textDark,
-              { color: getStatusColor(isOn, isDarkTheme) }
-            ]}>
-              {isOn ? 'ON' : 'OFF'}
-            </Text>
-          </View>
-        </View>
-      </View>
-    );
-  };
-
-  const renderAcCard = (device: SensorDevice) => {
-    const cardWidth = getCardWidth(2);
-    const deviceData = getDeviceData(device);
-    const isOn = deviceData.type === 'climate' && deviceData.data ? (deviceData.data as ClimateData).new_state !== 'off' : false;
-    const acData = deviceData.type === 'climate' ? deviceData.data as ClimateData : null;
-    
-    return (
-      <View key={device.id} style={[styles.card, { width: cardWidth }]}>
-        <View style={[styles.controlCard, isDarkTheme && styles.controlCardDark]}>
-          <View style={styles.controlHeader}>
-            <View style={[
-              styles.controlIconContainer,
-              isOn && styles.controlIconContainerActive,
-              { backgroundColor: isDarkTheme ? '#2a2a2a' : '#f8f9fa' }
-            ]}>
-              <Text style={[
-                styles.controlIcon,
-                { color: isOn ? (isDarkTheme ? '#4CAF50' : '#2E7D32') : (isDarkTheme ? '#666' : '#999') }
-              ]}>
-                {getDeviceIcon(device.type, isOn)}
-              </Text>
-            </View>
-            <View style={styles.controlInfo}>
-              <Text style={[styles.controlName, isDarkTheme && styles.textDark]} numberOfLines={1}>
-                {device.name}
-              </Text>
-              <Text style={[styles.controlType, isDarkTheme && styles.textSecondaryDark]} numberOfLines={1}>
-                {getDeviceTypeLabel(device.type)}
-              </Text>
-              {acData && isOn && (
-                <Text style={[styles.acStatus, isDarkTheme && styles.textSecondaryDark]}>
-                  {acData.attributes.temperature}°C • {acData.attributes.fan_mode}
-                </Text>
-              )}
-            </View>
-            <View style={styles.acControls}>
-              {isOn && (
-                <TouchableOpacity
-                  style={[styles.settingsButton, isDarkTheme && styles.settingsButtonDark]}
-                  onPress={() => openAcSettings(device)}
-                >
-                  <Ionicons 
-                    name="settings-outline" 
-                    size={18} 
-                    color={isDarkTheme ? "#fff" : "#666"} 
-                  />
-                </TouchableOpacity>
-              )}
-              <View style={styles.toggleWrapper}>
-                <Switch
-                  value={isOn}
-                  onValueChange={() => toggleDevice(device.id, device.type, device.entity)}
-                  trackColor={{ false: '#767577', true: isDarkTheme ? '#4CAF50' : '#81C784' }}
-                  thumbColor={isOn ? (isDarkTheme ? '#4CAF50' : '#2E7D32') : (isDarkTheme ? '#aaa' : '#f4f3f4')}
-                  ios_backgroundColor="#3e3e3e"
-                  style={styles.controlSwitch}
-                />
-              </View>
-            </View>
-          </View>
-          
-          {/* Status Indicator */}
-          <View style={styles.statusIndicator}>
-            <View style={[
-              styles.statusDot,
-              { backgroundColor: getStatusColor(isOn, isDarkTheme) }
-            ]} />
-            <Text style={[
-              styles.statusText,
-              isDarkTheme && styles.textDark,
-              { color: getStatusColor(isOn, isDarkTheme) }
-            ]}>
-              {isOn ? (acData?.new_state.toUpperCase() || 'ON') : 'OFF'}
-            </Text>
-          </View>
-        </View>
-      </View>
-    );
-  };
-
-  const renderAcSettingsModal = () => (
-    <Modal
-      visible={acModalVisible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={closeAcSettings}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, isDarkTheme && styles.modalContentDark]}>
-          <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, isDarkTheme && styles.textDark]}>
-              AC Settings - {selectedAc?.name}
-            </Text>
-            <TouchableOpacity onPress={closeAcSettings} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={isDarkTheme ? "#fff" : "#333"} />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.modalBody}>
-            <Text style={[styles.modalSectionTitle, isDarkTheme && styles.textDark]}>
-              Temperature Control
-            </Text>
-            <View style={styles.tempControl}>
-              <TouchableOpacity style={[styles.tempButton, isDarkTheme && styles.tempButtonDark]}>
-                <Text style={[styles.tempButtonText, isDarkTheme && styles.textDark]}>-</Text>
-              </TouchableOpacity>
-              <Text style={[styles.tempValue, isDarkTheme && styles.textDark]}>22°C</Text>
-              <TouchableOpacity style={[styles.tempButton, isDarkTheme && styles.tempButtonDark]}>
-                <Text style={[styles.tempButtonText, isDarkTheme && styles.textDark]}>+</Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={[styles.modalSectionTitle, isDarkTheme && styles.textDark]}>
-              Mode
-            </Text>
-            <View style={styles.modeContainer}>
-              {['Cool', 'Heat', 'Fan', 'Auto'].map(mode => (
-                <TouchableOpacity 
-                  key={mode}
-                  style={[styles.modeButton, isDarkTheme && styles.modeButtonDark]}
-                >
-                  <Text style={[styles.modeButtonText, isDarkTheme && styles.textDark]}>{mode}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <Text style={[styles.modalSectionTitle, isDarkTheme && styles.textDark]}>
-              Fan Speed
-            </Text>
-            <View style={styles.modeContainer}>
-              {['Low', 'Medium', 'High', 'Auto'].map(speed => (
-                <TouchableOpacity 
-                  key={speed}
-                  style={[styles.modeButton, isDarkTheme && styles.modeButtonDark]}
-                >
-                  <Text style={[styles.modeButtonText, isDarkTheme && styles.textDark]}>{speed}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.modalFooter}>
-            <TouchableOpacity 
-              style={[styles.saveButton, isDarkTheme && styles.saveButtonDark]}
-              onPress={closeAcSettings}
-            >
-              <Text style={styles.saveButtonText}>Save Settings</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-
-  const renderCameraCard = (camera: SensorDevice) => {
-    const cardWidth = getCardWidth(2);
-    
-    return (
-      <View key={camera.id} style={[styles.card, { width: cardWidth }]}>
-        <View style={[styles.deviceCard, isDarkTheme && styles.deviceCardDark]}>
-          <View style={styles.deviceHeader}>
-            <Text style={styles.cameraIcon}>📹</Text>
-            <View style={styles.deviceInfo}>
-              <Text style={[styles.deviceName, isDarkTheme && styles.textDark]} numberOfLines={1}>
-                {camera.name}
-              </Text>
-              <Text style={[styles.deviceType, isDarkTheme && styles.textSecondaryDark]} numberOfLines={1}>
-                Camera
-              </Text>
-            </View>
-          </View>
-          <View style={[styles.cameraPreview, isDarkTheme && styles.cameraPreviewDark]}>
-            <Text style={[styles.cameraPlaceholder, isDarkTheme && styles.textSecondaryDark]}>
-              Live View
-            </Text>
-          </View>
-          <View style={styles.cameraStatus}>
-            <View style={[styles.statusIndicator, { backgroundColor: '#4CAF50' }]} />
-            <Text style={[styles.cameraStatusText, isDarkTheme && styles.textSecondaryDark]}>
-              Online
-            </Text>
-          </View>
-        </View>
-      </View>
-    );
-  };
-
-  const renderSensorCard = (device: SensorDevice, itemsPerRow: number = 2) => {
-    if (device.type === 'temp_humidity') {
-      return renderTempHumidityCard(device);
-    }
-    if (device.type === 'light') {
-      return renderLightCard(device);
-    }
-    if (device.type === 'ac') {
-      return renderAcCard(device);
-    }
-    if (['water', 'radar', 'door', 'security'].includes(device.type)) {
-      return renderBinarySensorCard(device);
-    }
-
-    // Default fallback for other sensor types
-    const cardWidth = getCardWidth(itemsPerRow);
-    const deviceData = getDeviceData(device);
-    
-    return (
-      <View key={device.id} style={[styles.card, { width: cardWidth }]}>
-        <View style={[styles.deviceCard, isDarkTheme && styles.deviceCardDark]}>
-          <View style={styles.deviceHeader}>
-            <View style={[
-              styles.deviceIconContainer,
-              { backgroundColor: isDarkTheme ? '#2a2a2a' : '#f8f9fa' }
-            ]}>
-              <Text style={styles.deviceIcon}>
-                {getDeviceIcon(device.type)}
-              </Text>
-            </View>
-            <View style={styles.deviceInfo}>
-              <Text style={[styles.deviceName, isDarkTheme && styles.textDark]} numberOfLines={1}>
-                {device.name}
-              </Text>
-              <Text style={[styles.deviceType, isDarkTheme && styles.textSecondaryDark]} numberOfLines={1}>
-                {getDeviceTypeLabel(device.type)}
-              </Text>
-            </View>
-          </View>
-          
-          {/* Show sensor value if available */}
-          {deviceData.type === 'sensor' && deviceData.data && (
-            <View style={styles.sensorValueContainer}>
-              <Text style={[
-                styles.sensorValue,
-                { color: isDarkTheme ? '#fff' : '#333' }
-              ]}>
-                {(deviceData.data as SensorData).new_state}
-                <Text style={styles.sensorUnit}>
-                  {(deviceData.data as SensorData).attributes.unit_of_measurement}
-                </Text>
-              </Text>
-            </View>
-          )}
-        </View>
-      </View>
-    );
-  };
-
-  const renderGridSection = (title: string, devices: SensorDevice[], icon: string, itemsPerRow: number = 2) => {
-    if (devices.length === 0) return null;
-
-    return (
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, isDarkTheme && styles.textDark]}>
-          {icon} {title} ({devices.length})
-        </Text>
-        <View style={[styles.grid, { gap: CARD_GAP }]}>
-          {devices.map((device) => renderSensorCard(device, itemsPerRow))}
-        </View>
-      </View>
-    );
-  };
-
-  const renderCameraSection = (cameras: SensorDevice[]) => {
-    if (cameras.length === 0) return null;
-
-    return (
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, isDarkTheme && styles.textDark]}>
-          📹 Cameras ({cameras.length})
-        </Text>
-        <View style={[styles.grid, { gap: CARD_GAP }]}>
-          {cameras.map((camera) => renderCameraCard(camera))}
-        </View>
-      </View>
-    );
+    return configs[type] || { title: 'Other Sensors', icon: '📊' };
   };
 
   if (loading) {
@@ -1145,28 +544,6 @@ const DashboardScreen: React.FC = () => {
 
   return (
     <View style={[styles.container, isDarkTheme && styles.containerDark]}>
-      {/* Header with Theme Toggle */}
-      <View style={[styles.header, isDarkTheme && styles.headerDark]}>
-        <View style={styles.headerTop}>
-          <Text style={[styles.title, isDarkTheme && styles.textDark]}>Smart Home Dashboard</Text>
-          <View style={styles.themeContainer}>
-            <Ionicons 
-              name={isDarkTheme ? "moon" : "sunny"} 
-              size={20} 
-              color={isDarkTheme ? "#ffd700" : "#ff8c00"} 
-            />
-            <Switch
-              value={isDarkTheme}
-              onValueChange={toggleTheme}
-              trackColor={{ false: '#767577', true: '#81b0ff' }}
-              thumbColor={isDarkTheme ? '#007AFF' : '#f4f3f4'}
-            />
-          </View>
-        </View>
-        <Text style={[styles.subtitle, isDarkTheme && styles.textSecondaryDark]}>
-          {configuredDevices.length} device{configuredDevices.length !== 1 ? 's' : ''} configured
-        </Text>
-      </View>
 
       {configuredDevices.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -1191,49 +568,226 @@ const DashboardScreen: React.FC = () => {
           contentContainerStyle={styles.scrollContent}
         >
           {/* Temperature & Humidity Sensors */}
-          {renderGridSection(
-            'Temperature & Humidity', 
-            configuredDevices.filter(device => device.type === 'temp_humidity'), 
-            '🌡️', 
-            2
-          )}
+          {(() => {
+            const devices = configuredDevices.filter(device => device.type === 'temp_humidity');
+            if (devices.length === 0) return null;
+            const { title, icon } = getSectionConfig('temp_humidity');
+            
+            return (
+              <DeviceSection
+                title={title}
+                devices={devices}
+                icon={icon}
+                itemsPerRow={2}
+              >
+                {devices.map(device => {
+                  const { temperature, humidity } = getTempHumidityData(device);
+                  return (
+                    <TempHumidityCard
+                      key={device.id}
+                      device={device}
+                      temperature={temperature}
+                      humidity={humidity}
+                      cardWidth={getCardWidth(2)}
+                    />
+                  );
+                })}
+              </DeviceSection>
+            );
+          })()}
 
           {/* Control Section - Lights */}
-          {renderGridSection(
-            'Lights Control', 
-            configuredDevices.filter(device => device.type === 'light'), 
-            '💡', 
-            2
-          )}
+          {(() => {
+            const devices = configuredDevices.filter(device => device.type === 'light');
+            if (devices.length === 0) return null;
+            const { title, icon } = getSectionConfig('light');
+            
+            return (
+              <DeviceSection
+                title={title}
+                devices={devices}
+                icon={icon}
+                itemsPerRow={2}
+              >
+                {devices.map(device => {
+                  const deviceData = getDeviceData(device);
+                  const isOn = deviceData.type === 'light' && deviceData.data ? 
+                    (deviceData.data as LightData).new_state === 'on' : false;
+                  
+                  return (
+                    <LightCard
+                      key={device.id}
+                      device={device}
+                      isOn={isOn}
+                      onToggle={toggleDevice}
+                      cardWidth={getCardWidth(2)}
+                    />
+                  );
+                })}
+              </DeviceSection>
+            );
+          })()}
 
           {/* Control Section - AC */}
-          {renderGridSection(
-            'Air Conditioners', 
-            configuredDevices.filter(device => device.type === 'ac'), 
-            '❄️', 
-            2
-          )}
+          {(() => {
+            const devices = configuredDevices.filter(device => device.type === 'ac');
+            if (devices.length === 0) return null;
+            const { title, icon } = getSectionConfig('ac');
+            
+            return (
+              <DeviceSection
+                title={title}
+                devices={devices}
+                icon={icon}
+                itemsPerRow={2}
+              >
+                {devices.map(device => {
+                  const deviceData = getDeviceData(device);
+                  const isOn = deviceData.type === 'climate' && deviceData.data ? 
+                    (deviceData.data as ClimateData).new_state !== 'off' : false;
+                  const acData = deviceData.type === 'climate' ? deviceData.data as ClimateData : null;
+                  
+                  return (
+                    <AcCard
+                      key={device.id}
+                      device={device}
+                      isOn={isOn}
+                      acData={acData}
+                      onToggle={toggleDevice}
+                      onOpenSettings={openAcSettings}
+                      cardWidth={getCardWidth(2)}
+                    />
+                  );
+                })}
+              </DeviceSection>
+            );
+          })()}
 
           {/* Binary Sensors */}
-          {renderGridSection('Water Sensors', configuredDevices.filter(device => device.type === 'water'), '💧', 2)}
-          {renderGridSection('Radar Sensors', configuredDevices.filter(device => device.type === 'radar'), '📡', 2)}
-          {renderGridSection('Door Sensors', configuredDevices.filter(device => device.type === 'door'), '🚪', 2)}
-          {renderGridSection('Security Systems', configuredDevices.filter(device => device.type === 'security'), '🔒', 2)}
+          {['water', 'radar', 'door', 'security'].map(sensorType => {
+            const devices = configuredDevices.filter(device => device.type === sensorType);
+            if (devices.length === 0) return null;
+            const { title, icon } = getSectionConfig(sensorType);
 
-          {/* Other Sensors */}
-          {renderGridSection('Other Sensors', configuredDevices.filter(device => 
-            !['temp_humidity', 'light', 'ac', 'water', 'radar', 'door', 'security', 'camera'].includes(device.type)
-          ), '📊', 2)}
+            return (
+              <DeviceSection
+                key={sensorType}
+                title={title}
+                devices={devices}
+                icon={icon}
+                itemsPerRow={2}
+              >
+                {devices.map(device => {
+                  const { isActive, stateText } = getBinarySensorState(device);
+                  return (
+                    <BinarySensorCard
+                      key={device.id}
+                      device={device}
+                      isActive={isActive}
+                      stateText={stateText}
+                      cardWidth={getCardWidth(2)}
+                    />
+                  );
+                })}
+              </DeviceSection>
+            );
+          })}
 
           {/* Cameras */}
-          {renderCameraSection(configuredDevices.filter(device => device.type === 'camera'))}
+          {(() => {
+            const devices = configuredDevices.filter(device => device.type === 'camera');
+            if (devices.length === 0) return null;
+            const { title, icon } = getSectionConfig('camera');
+            
+            return (
+              <DeviceSection
+                title={title}
+                devices={devices}
+                icon={icon}
+                itemsPerRow={2}
+              >
+                {devices.map(camera => (
+                  <CameraCard
+                    key={camera.id}
+                    camera={camera}
+                    cardWidth={getCardWidth(2)}
+                  />
+                ))}
+              </DeviceSection>
+            );
+          })()}
+
+          {/* Other Sensors */}
+          {(() => {
+            const devices = configuredDevices.filter(device => 
+              !['temp_humidity', 'light', 'ac', 'water', 'radar', 'door', 'security', 'camera'].includes(device.type)
+            );
+            if (devices.length === 0) return null;
+            
+            return (
+              <DeviceSection
+                title="Other Sensors"
+                devices={devices}
+                icon="📊"
+                itemsPerRow={2}
+              >
+                {devices.map(device => {
+                  // For other sensor types, use a simple card display
+                  const deviceData = getDeviceData(device);
+                  const cardWidth = getCardWidth(2);
+                  
+                  return (
+                    <View key={device.id} style={[styles.card, { width: cardWidth }]}>
+                      <View style={[styles.deviceCard, isDarkTheme && styles.deviceCardDark]}>
+                        <View style={styles.deviceHeader}>
+                          <View style={[
+                            styles.deviceIconContainer,
+                            { backgroundColor: isDarkTheme ? '#2a2a2a' : '#f8f9fa' }
+                          ]}>
+                            <Text style={styles.deviceIcon}>📱</Text>
+                          </View>
+                          <View style={styles.deviceInfo}>
+                            <Text style={[styles.deviceName, isDarkTheme && styles.textDark]} numberOfLines={1}>
+                              {device.name}
+                            </Text>
+                            <Text style={[styles.deviceType, isDarkTheme && styles.textSecondaryDark]} numberOfLines={1}>
+                              {device.type}
+                            </Text>
+                          </View>
+                        </View>
+                        
+                        {/* Show sensor value if available */}
+                        {deviceData.type === 'sensor' && deviceData.data && (
+                          <View style={styles.sensorValueContainer}>
+                            <Text style={[
+                              styles.sensorValue,
+                              { color: isDarkTheme ? '#fff' : '#333' }
+                            ]}>
+                              {(deviceData.data as SensorData).new_state}
+                              <Text style={styles.sensorUnit}>
+                                {(deviceData.data as SensorData).attributes.unit_of_measurement}
+                              </Text>
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
+              </DeviceSection>
+            );
+          })()}
 
           <View style={styles.bottomSpacer} />
         </ScrollView>
       )}
 
       {/* AC Settings Modal */}
-      {renderAcSettingsModal()}
+      <AcSettingsModal
+        visible={acModalVisible}
+        selectedAc={selectedAc}
+        onClose={closeAcSettings}
+      />
     </View>
   );
 };
@@ -1259,41 +813,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
-  header: {
-    backgroundColor: '#fff',
-    paddingHorizontal: CONTAINER_PADDING,
-    paddingTop: 20,
-    paddingBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  headerDark: {
-    backgroundColor: '#1e1e1e',
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    flex: 1,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-  },
-  themeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   scrollView: {
     flex: 1,
   },
@@ -1301,291 +820,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: CONTAINER_PADDING,
     paddingBottom: 20,
   },
-  section: {
-    marginBottom: 24,
-    marginTop: 8,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginBottom: 16,
-    color: '#333',
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
   card: {
     marginBottom: CARD_GAP,
   },
-  // Binary Sensor Cards (Water, Radar, Door, Security)
-  sensorCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-    minHeight: 100,
-    flex: 1,
-  },
-  sensorCardDark: {
-    backgroundColor: '#1e1e1e',
-    shadowOpacity: 0.3,
-  },
-  sensorHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sensorIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-    backgroundColor: '#f8f9fa',
-  },
-  sensorIconContainerActive: {
-    transform: [{ scale: 1.05 }],
-  },
-  sensorIcon: {
-    fontSize: 20,
-  },
-  sensorInfo: {
-    flex: 1,
-  },
-  sensorName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 2,
-  },
-  sensorType: {
-    fontSize: 12,
-    color: '#666',
-  },
-  stateContainer: {
-    alignItems: 'center',
-  },
-  stateIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stateDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  stateText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  // Control Cards (Lights & AC)
-  controlCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-    minHeight: 120,
-    flex: 1,
-  },
-  controlCardDark: {
-    backgroundColor: '#1e1e1e',
-    shadowOpacity: 0.3,
-  },
-  controlHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  controlIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-    backgroundColor: '#f8f9fa',
-  },
-  controlIconContainerActive: {
-    transform: [{ scale: 1.05 }],
-  },
-  controlIcon: {
-    fontSize: 20,
-  },
-  controlInfo: {
-    flex: 1,
-  },
-  controlName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 2,
-  },
-  controlType: {
-    fontSize: 12,
-    color: '#666',
-  },
-  acStatus: {
-    fontSize: 11,
-    color: '#666',
-    marginTop: 2,
-  },
-  toggleWrapper: {
-    marginLeft: 'auto',
-  },
-  controlSwitch: {
-    transform: [{ scale: 1.1 }],
-  },
-  acControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  settingsButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-  },
-  settingsButtonDark: {
-    backgroundColor: '#2a2a2a',
-  },
-  statusIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    width: '100%',
-    maxWidth: 400,
-  },
-  modalContentDark: {
-    backgroundColor: '#1e1e1e',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    flex: 1,
-  },
-  closeButton: {
-    padding: 4,
-  },
-  modalBody: {
-    marginBottom: 20,
-  },
-  modalSectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
-    marginTop: 16,
-  },
-  tempControl: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  tempButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  tempButtonDark: {
-    backgroundColor: '#2a2a2a',
-  },
-  tempButtonText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  tempValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  modeContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
-  },
-  modeButton: {
-    flex: 1,
-    minWidth: 80,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  modeButtonDark: {
-    backgroundColor: '#2a2a2a',
-  },
-  modeButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-  },
-  modalFooter: {
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    paddingTop: 16,
-  },
-  saveButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  saveButtonDark: {
-    backgroundColor: '#1565C0',
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  // Device Cards (Temperature/Humidity and others)
   deviceCard: {
     backgroundColor: '#fff',
     borderRadius: 16,
@@ -1614,17 +851,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-    backgroundColor: '#f8f9fa',
-  },
-  deviceIconContainerActive: {
-    transform: [{ scale: 1.05 }],
   },
   deviceIcon: {
     fontSize: 20,
-  },
-  cameraIcon: {
-    fontSize: 20,
-    marginRight: 12,
   },
   deviceInfo: {
     flex: 1,
@@ -1639,46 +868,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
   },
-  // Temperature & Humidity specific styles
-  tempHumidityContainer: {
-    marginBottom: 12,
-  },
-  valueContainer: {
-    marginBottom: 16,
-  },
-  valueRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  valueLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#666',
-  },
-  value: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  valueBar: {
-    height: 6,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  valueFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  lastUpdated: {
-    marginTop: 'auto',
-  },
-  lastUpdatedText: {
-    fontSize: 11,
-    color: '#999',
-    textAlign: 'center',
-  },
-  // Sensor Value Styles
   sensorValueContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -1694,32 +883,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     opacity: 0.8,
-  },
-  // Camera specific styles
-  cameraPreview: {
-    height: 80,
-    backgroundColor: '#e9ecef',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  cameraPreviewDark: {
-    backgroundColor: '#2a2a2a',
-  },
-  cameraPlaceholder: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '500',
-  },
-  cameraStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  cameraStatusText: {
-    fontSize: 11,
-    color: '#666',
   },
   emptyContainer: {
     flex: 1,

@@ -1,4 +1,6 @@
+import { useTheme } from '@/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
@@ -6,7 +8,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -26,23 +27,22 @@ interface CameraDevice extends SensorDevice {
 }
 
 const SettingsScreen: React.FC = () => {
+  const { isDark: isDarkTheme } = useTheme();
   const [devices, setDevices] = useState<StoredDevices | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isDarkTheme, setIsDarkTheme] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<CollapsibleSection>({
-    waterSensors: false,
-    radarSensors: false,
-    tempHumiditySensors: false,
-    doorSensor: false,
-    lights: false,
-    cameras: false,
-    acs: false,
-    security: false,
+    waterSensors: true,
+    radarSensors: true,
+    tempHumiditySensors: true,
+    doorSensor: true,
+    lights: true,
+    cameras: true,
+    acs: true,
+    security: true,
   });
 
   useEffect(() => {
     loadDevices();
-    loadThemePreference();
   }, []);
 
   const loadDevices = async () => {
@@ -56,24 +56,7 @@ const SettingsScreen: React.FC = () => {
     }
   };
 
-  const loadThemePreference = async () => {
-    try {
-      const savedTheme = await deviceStorageService.loadThemePreference();
-      setIsDarkTheme(savedTheme === 'dark');
-    } catch {
-      setIsDarkTheme(false);
-    }
-  };
 
-  const toggleTheme = async () => {
-    const newTheme = !isDarkTheme;
-    setIsDarkTheme(newTheme);
-    try {
-      await deviceStorageService.saveThemePreference(newTheme ? 'dark' : 'light');
-    } catch {
-      console.error('Failed to save theme preference');
-    }
-  };
 
   const toggleSection = (sectionKey: string) => {
     setCollapsedSections(prev => ({
@@ -235,7 +218,16 @@ const SettingsScreen: React.FC = () => {
     if (!devices) return;
     try {
       await deviceStorageService.saveDevices(devices);
-      Alert.alert('Success', 'All settings have been saved successfully!');
+      Alert.alert(
+        'Success', 
+        'All settings have been saved successfully!',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.push('/(tabs)')
+          }
+        ]
+      );
     } catch {
       Alert.alert('Error', 'Failed to save settings');
     }
@@ -274,30 +266,9 @@ const SettingsScreen: React.FC = () => {
       style={[styles.container, isDarkTheme && styles.containerDark]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Header */}
+            <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* Quick Actions */}
         <View style={[styles.header, isDarkTheme && styles.headerDark]}>
-          <View style={styles.headerTop}>
-            <Text style={[styles.title, isDarkTheme && styles.textDark]}>Smart Home Settings</Text>
-            <View style={styles.themeContainer}>
-              <Ionicons
-                name={isDarkTheme ? "moon" : "sunny"}
-                size={20}
-                color={isDarkTheme ? "#ffd700" : "#ff8c00"}
-              />
-              <Switch
-                value={isDarkTheme}
-                onValueChange={toggleTheme}
-                trackColor={{ false: '#767577', true: '#81b0ff' }}
-                thumbColor={isDarkTheme ? '#007AFF' : '#f4f3f4'}
-              />
-            </View>
-          </View>
-          <Text style={[styles.subtitle, isDarkTheme && styles.textSecondaryDark]}>
-            Configure your sensors and devices
-          </Text>
-
-          {/* Quick Actions */}
           <View style={styles.quickActions}>
             <TouchableOpacity
               style={[styles.quickActionButton, isDarkTheme && styles.quickActionButtonDark]}

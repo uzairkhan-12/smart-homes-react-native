@@ -1,4 +1,3 @@
-import { deviceStorageService } from '@/src/services/DeviceStorageService';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useRef, useState } from 'react';
@@ -16,6 +15,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import UniversalFooter from '@/components/ui/UniversalFooter';
+import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
+
 // Indigo palette for consistent coloring
 const INDIGO = {
   50:  '#EEF2FF',
@@ -31,35 +34,12 @@ const INDIGO = {
 };
 
 export default function LoginScreen() {
+  const { login } = useAuth();
+  const { isDark, setTheme } = useTheme();
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
-  const [isDarkTheme, setIsDarkTheme] = useState(false);
   const inputs = useRef<(TextInput | null)[]>([]);
-
-  // Load theme preference on mount
-  React.useEffect(() => {
-    loadThemePreference();
-  }, []);
-
-  const loadThemePreference = async () => {
-    try {
-      const savedTheme = await deviceStorageService.loadThemePreference();
-      setIsDarkTheme(savedTheme === 'dark');
-    } catch {
-      setIsDarkTheme(false);
-    }
-  };
-
-  const toggleTheme = async () => {
-    const newTheme = !isDarkTheme;
-    setIsDarkTheme(newTheme);
-    try {
-      await deviceStorageService.saveThemePreference(newTheme ? 'dark' : 'light');
-    } catch {
-      console.error('Failed to save theme preference');
-    }
-  };
 
   const handleCodeChange = (text: string, index: number) => {
     const newCode = [...code];
@@ -82,10 +62,9 @@ export default function LoginScreen() {
     if (fullCode.length === 6) {
       setIsLoading(true);
       try {
-        // Replace this with your actual login logic
-        const success = await mockLogin(fullCode);
+        const success = await login(fullCode);
         if (success) {
-          router.replace('/settings');
+          router.replace('/(tabs)');
         } else {
           Alert.alert('Login Failed', 'Invalid access code. Please try again.');
           setCode(['', '', '', '', '', '']);
@@ -99,14 +78,12 @@ export default function LoginScreen() {
     }
   };
 
-  // Mock login function - replace with your actual authentication
-  const mockLogin = async (code: string): Promise<boolean> => {
-    // Simulate API call
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve(code === '123456'); // Simple mock validation
-      }, 1500);
-    });
+  const toggleTheme = () => {
+    if (isDark) {
+      setTheme('light');
+    } else {
+      setTheme('dark');
+    }
   };
 
   const isCodeComplete = code.every(digit => digit !== '') && !isLoading;
@@ -114,10 +91,7 @@ export default function LoginScreen() {
   const styles = StyleSheet.create({
     container: { 
       flex: 1, 
-      backgroundColor: isDarkTheme ? '#121212' : '#f5f5f5' 
-    },
-    containerDark: { 
-      backgroundColor: '#121212' 
+      backgroundColor: isDark ? '#121212' : '#f5f5f5' 
     },
     themeToggleContainer: {
       position: 'absolute',
@@ -144,13 +118,13 @@ export default function LoginScreen() {
     title: {
       fontSize: 32,
       fontWeight: 'bold',
-      color: isDarkTheme ? '#fff' : '#333',
+      color: isDark ? '#fff' : '#333',
       textAlign: 'center',
       marginBottom: 8,
     },
     subtitle: {
       fontSize: 16,
-      color: isDarkTheme ? '#aaa' : '#666',
+      color: isDark ? '#aaa' : '#666',
       textAlign: 'center',
       marginBottom: 48,
     },
@@ -164,7 +138,7 @@ export default function LoginScreen() {
       flexDirection: 'row',
     },
     dash: {
-      color: isDarkTheme ? '#aaa' : '#666',
+      color: isDark ? '#aaa' : '#666',
       fontSize: 24,
       fontWeight: 'bold',
       marginHorizontal: 16,
@@ -175,13 +149,13 @@ export default function LoginScreen() {
       height: 60,
       marginHorizontal: 4,
       borderWidth: 2,
-      borderColor: isDarkTheme ? '#333' : '#ddd',
+      borderColor: isDark ? '#333' : '#ddd',
       borderRadius: 12,
       fontSize: 24,
       fontWeight: 'bold',
       textAlign: 'center',
-      color: isDarkTheme ? '#fff' : '#333',
-      backgroundColor: isDarkTheme ? '#2a2a2a' : '#fafafa',
+      color: isDark ? '#fff' : '#333',
+      backgroundColor: isDark ? '#2a2a2a' : '#fafafa',
       shadowColor: 'rgba(0,0,0,0.05)',
       shadowOpacity: 0.1,
       shadowOffset: { width: 0, height: 1 },
@@ -190,11 +164,11 @@ export default function LoginScreen() {
     },
     codeInputFocused: {
       borderColor: INDIGO[600],
-      backgroundColor: isDarkTheme ? INDIGO[900] : INDIGO[50],
+      backgroundColor: isDark ? INDIGO[900] : INDIGO[50],
     },
     codeInputFilled: {
       borderColor: INDIGO[500],
-      backgroundColor: isDarkTheme ? '#2a2a2a' : '#fafafa',
+      backgroundColor: isDark ? '#2a2a2a' : '#fafafa',
     },
     loginButton: {
       backgroundColor: INDIGO[600],
@@ -220,7 +194,7 @@ export default function LoginScreen() {
     },
     helpText: {
       fontSize: 14,
-      color: isDarkTheme ? '#aaa' : '#666',
+      color: isDark ? '#aaa' : '#666',
       textAlign: 'center',
       lineHeight: 20,
     },
@@ -230,10 +204,7 @@ export default function LoginScreen() {
       gap: 8,
       padding: 8,
       borderRadius: 8,
-      backgroundColor: isDarkTheme ? '#2a2a2a' : '#f0f0f0',
-    },
-    textDark: { 
-      color: '#fff' 
+      backgroundColor: isDark ? '#2a2a2a' : '#f0f0f0',
     },
   });
 
@@ -251,9 +222,9 @@ export default function LoginScreen() {
             activeOpacity={0.7}
           >
             <Ionicons
-              name={isDarkTheme ? "moon" : "sunny"}
+              name={isDark ? "moon" : "sunny"}
               size={20}
-              color={isDarkTheme ? "#ffd700" : "#ff8c00"}
+              color={isDark ? "#ffd700" : "#ff8c00"}
             />
           </TouchableOpacity>
         </View>
@@ -262,9 +233,9 @@ export default function LoginScreen() {
           <View style={styles.content}>
             <View style={styles.logoContainer}>
               <Image 
-                source={isDarkTheme
-                  ? require('../../assets/images/dbf-white.png')
-                  : require('../../assets/images/dbf-black.png')
+                source={isDark
+                  ? require('../assets/images/dbf-white.png')
+                  : require('../assets/images/dbf-black.png')
                 }
                 style={styles.logoImage}
                 resizeMode="contain"
@@ -347,6 +318,7 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <UniversalFooter />
     </SafeAreaView>
   );
 }
