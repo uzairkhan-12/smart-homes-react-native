@@ -4,6 +4,9 @@ export interface SensorDevice {
   type: string;
   entity: string;
   room?: string;
+  stream_url?: string; // For camera devices
+  motion_sensor?: string; // For camera motion detection entity
+  occupancy_sensor?: string; // For camera occupancy detection entity
 }
 
 // Define types for different entity data

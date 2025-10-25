@@ -38,12 +38,26 @@ class DeviceStorageService {
         entity: '',
         type: 'light' as const
       })),
-      cameras: Array.from({ length: 2 }, (_, i) => ({
-        id: `camera_${i + 1}`,
-        name: `Camera ${i + 1}`,
-        entity: '',
-        type: 'camera' as const
-      })),
+      cameras: [
+        {
+          id: 'camera_1',
+          name: 'Front Door Camera',
+          entity: 'camera.front_door',
+          type: 'camera' as const,
+          stream_url: 'http://192.168.100.95:8123/api/camera_proxy_stream/camera.front_door',
+          motion_sensor: 'binary_sensor.radar_sensor_1',
+          occupancy_sensor: 'binary_sensor.frontdoor_1_person_occupancy'
+        },
+        {
+          id: 'camera_2',
+          name: 'Camera 2',
+          entity: 'camera.living_room',
+          type: 'camera' as const,
+          stream_url: 'http://192.168.100.55:5050/api/office_demo',
+          motion_sensor: 'binary_sensor.office_demo_motion',
+          occupancy_sensor: 'binary_sensor.office_demo_person_occupancy'
+        }
+      ],
       acs: Array.from({ length: 2 }, (_, i) => ({
         id: `ac_${i + 1}`,
         name: `Air Conditioner ${i + 1}`,
@@ -117,6 +131,7 @@ class DeviceStorageService {
   async getConfiguredDevices(): Promise<SensorDevice[]> {
     try {
       const devices = await this.loadDevices();
+      console.log('Loaded devices from storage:', devices);
       const allDevices: SensorDevice[] = [];
 
       // Add array devices

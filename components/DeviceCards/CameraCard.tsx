@@ -14,7 +14,7 @@ const CameraCard: React.FC<CameraCardProps> = ({ camera, cardWidth }: any) => {
 
   const hasMotionSensor = camera.motion_sensor?.detected;
   const hasOccupancySensor = camera.occupancy_sensor?.detected;
-
+  console.log({hasMotionSensor, hasOccupancySensor});
   return (
     <View style={[styles.card, { width: cardWidth }]}>
       <View style={[styles.deviceCard, isDarkTheme && styles.deviceCardDark]}>

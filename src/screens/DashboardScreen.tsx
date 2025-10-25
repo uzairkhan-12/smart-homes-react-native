@@ -3,7 +3,7 @@ import DashboardHeader from '@/components/ui/DashboardHeader';
 import TempHumidityDetailsModal from '@/components/ui/TempHumidityDetailsModal';
 import { useTheme } from '@/context/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   RefreshControl,
@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { BinarySensorData, ClimateData, LightData, SensorData, SensorDevice } from '../../types';
 import { deviceStorageService } from '../services/DeviceStorageService';
+import { HomeAssistantData, homeAssistantService } from '../services/HomeAssistantService';
 
 // Import components
 
@@ -28,17 +29,51 @@ const DashboardScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   
-  // Separate states for different entity types
-  const [binarySensorData, setBinarySensorData] = useState<{ [key: string]: BinarySensorData }>({});
-  const [climateData, setClimateData] = useState<{ [key: string]: ClimateData }>({});
-  const [lightData, setLightData] = useState<{ [key: string]: LightData }>({});
-  const [sensorData, setSensorData] = useState<{ [key: string]: SensorData }>({});
+  // Home Assistant data state
+  const [haData, setHaData] = useState<HomeAssistantData>({
+    binarySensorData: {},
+    climateData: {},
+    lightData: {},
+    sensorData: {}
+  });
+  const [isConnected, setIsConnected] = useState(false);
   
   const [acModalVisible, setAcModalVisible] = useState(false);
   const [selectedAc, setSelectedAc] = useState<SensorDevice | null>(null);
   const [tempHumidityModalVisible, setTempHumidityModalVisible] = useState(false);
   const [avgTemperature, setAvgTemperature] = useState<number>(0);
   const [avgHumidity, setAvgHumidity] = useState<number>(0);
+
+  // Connect to HomeAssistant WebSocket service
+  useEffect(() => {
+    // Subscribe to data updates
+    const unsubscribe = homeAssistantService.subscribe((data: HomeAssistantData) => {
+      setHaData(data);
+      
+      // Update connection status
+      setIsConnected(homeAssistantService.isConnected());
+    });
+
+    // Only connect if not already connected
+    if (!homeAssistantService.isConnected()) {
+      homeAssistantService.connectWebSocket();
+    } else {
+      setIsConnected(true);
+    }
+    
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // Check connection status periodically
+  React.useEffect(() => {
+    const connectionCheck = setInterval(() => {
+      setIsConnected(homeAssistantService.isConnected());
+    }, 5000); // Check every 5 seconds
+    
+    return () => clearInterval(connectionCheck);
+  }, []);
 
   // Calculate responsive card widths based on current screen dimensions
   const getCardWidth = (itemsPerRow: number) => {
@@ -53,14 +88,14 @@ const DashboardScreen: React.FC = () => {
   useFocusEffect(
     useCallback(() => {
       loadConfiguredDevices();
-      loadEntityData();
+      // loadEntityData(); // Removed - now using WebSocket data
     }, [])
   );
 
   // Calculate averages whenever sensor data changes
   React.useEffect(() => {
     calculateAverages();
-  }, [sensorData, configuredDevices]);
+  }, [haData.sensorData, configuredDevices]);
 
   const calculateAverages = () => {
     const tempHumidityDevices = configuredDevices.filter(device => device.type === 'temp_humidity');
@@ -112,294 +147,30 @@ const DashboardScreen: React.FC = () => {
     }
   };
 
-  const loadEntityData = async () => {
-    try {
-      // TODO: Replace with actual Home Assistant API calls
-      // This is mock data for demonstration using your provided examples
-      
-      // Binary Sensor Data
-      const binaryData: { [key: string]: BinarySensorData } = {
-        'binary_sensor.boardb_presence_tu_pressure': {
-          entity_id: 'binary_sensor.boardb_presence_tu_pressure',
-          old_state: 'off',
-          new_state: 'on', // Active water detection
-          user_id: null,
-          timestamp: '2025-10-21T16:01:02.946201+00:00',
-          attributes: {
-            device_class: 'moisture',
-            friendly_name: 'Water Sensor 1'
-          }
-        },
-        'test22': {
-          entity_id: 'test22',
-          old_state: 'off',
-          new_state: 'off',
-          user_id: null,
-          timestamp: '2025-10-21T16:01:02.946201+00:00',
-          attributes: {
-            device_class: 'moisture',
-            friendly_name: 'Water Sensor 2'
-          }
-        },
-        'test': {
-          entity_id: 'test',
-          old_state: 'off',
-          new_state: 'off',
-          user_id: null,
-          timestamp: '2025-10-21T16:01:02.946201+00:00',
-          attributes: {
-            device_class: 'moisture',
-            friendly_name: 'Water Sensor 3'
-          }
-        },
-        'radar 1': {
-          entity_id: 'radar 1',
-          old_state: 'off',
-          new_state: 'on', // Active radar detection
-          user_id: null,
-          timestamp: '2025-10-21T16:01:02.946201+00:00',
-          attributes: {
-            device_class: 'motion',
-            friendly_name: 'Radar Sensor 1'
-          }
-        },
-        'radar 2': {
-          entity_id: 'radar 2',
-          old_state: 'off',
-          new_state: 'off',
-          user_id: null,
-          timestamp: '2025-10-21T16:01:02.946201+00:00',
-          attributes: {
-            device_class: 'motion',
-            friendly_name: 'Radar Sensor 2'
-          }
-        },
-        'radar 3': {
-          entity_id: 'radar 3',
-          old_state: 'off',
-          new_state: 'off',
-          user_id: null,
-          timestamp: '2025-10-21T16:01:02.946201+00:00',
-          attributes: {
-            device_class: 'motion',
-            friendly_name: 'Radar Sensor 3'
-          }
-        },
-        'binary_sensor.frontdoor_1_person_occupancy': {
-          entity_id: 'binary_sensor.frontdoor_1_person_occupancy',
-          old_state: 'off',
-          new_state: 'on',
-          user_id: null,
-          timestamp: '2025-10-21T16:01:02.946201+00:00',
-          attributes: {
-            device_class: 'occupancy',
-            icon: 'mdi:home-outline',
-            friendly_name: 'Frontdoor 1 Person occupancy'
-          }
-        },
-        'binary_sensor.boardb_presence_tu_presence': {
-          entity_id: 'binary_sensor.boardb_presence_tu_presence',
-          old_state: 'off',
-          new_state: 'on',
-          user_id: null,
-          timestamp: '2025-10-21T15:59:06.037860+00:00',
-          attributes: {
-            device_class: 'occupancy',
-            friendly_name: 'BoardB_Presence_TU Occupancy'
-          }
-        },
-        'binary_sensor.water_leak': {
-          entity_id: 'binary_sensor.water_leak',
-          old_state: 'off',
-          new_state: 'off',
-          user_id: null,
-          timestamp: '2025-10-21T16:01:02.946201+00:00',
-          attributes: {
-            device_class: 'moisture',
-            friendly_name: 'Water Leak Sensor'
-          }
-        },
-        'binary_sensor.radar_motion': {
-          entity_id: 'binary_sensor.radar_motion',
-          old_state: 'off',
-          new_state: 'on',
-          user_id: null,
-          timestamp: '2025-10-21T16:01:02.946201+00:00',
-          attributes: {
-            device_class: 'motion',
-            friendly_name: 'Radar Motion Sensor'
-          }
-        },
-        'binary_sensor.front_door': {
-          entity_id: 'binary_sensor.front_door',
-          old_state: 'off',
-          new_state: 'off',
-          user_id: null,
-          timestamp: '2025-10-21T16:01:02.946201+00:00',
-          attributes: {
-            device_class: 'door',
-            friendly_name: 'Front Door'
-          }
-        },
-        'binary_sensor.security_system': {
-          entity_id: 'binary_sensor.security_system',
-          old_state: 'off',
-          new_state: 'off',
-          user_id: null,
-          timestamp: '2025-10-21T16:01:02.946201+00:00',
-          attributes: {
-            device_class: 'safety',
-            friendly_name: 'Security System'
-          }
-        }
-      };
-      setBinarySensorData(binaryData);
 
-      // Climate Data (AC)
-      const climateData: { [key: string]: ClimateData } = {
-        'climate.office_ac': {
-          entity_id: 'climate.office_ac',
-          old_state: 'heat_cool',
-          new_state: 'heat_cool',
-          user_id: '45882e54e84d4c308af1caabae6b3876',
-          timestamp: '2025-10-21T15:59:57.597483+00:00',
-          attributes: {
-            hvac_modes: ['off', 'heat', 'cool', 'heat_cool', 'fan_only'],
-            min_temp: 18.0,
-            max_temp: 30.0,
-            target_temp_step: 1.0,
-            fan_modes: ['low', 'mid', 'high'],
-            current_temperature: null,
-            temperature: 22,
-            fan_mode: 'low',
-            last_on_operation: 'heat_cool',
-            device_code: 1380,
-            manufacturer: 'Midea',
-            supported_models: ['Unknown'],
-            supported_controller: 'Broadlink',
-            commands_encoding: 'Base64',
-            friendly_name: 'Office AC',
-            supported_features: 393
-          }
-        }
-      };
-      setClimateData(climateData);
-
-      // Light Data
-      const lightData: { [key: string]: LightData } = {
-        'light.boarda_buttonswitch_a': {
-          entity_id: 'light.boarda_buttonswitch_a',
-          old_state: 'off',
-          new_state: 'on',
-          user_id: null,
-          timestamp: '2025-10-21T15:49:37.237420+00:00',
-          attributes: {
-            supported_color_modes: ['onoff'],
-            color_mode: 'onoff',
-            friendly_name: 'Board A - Button Switch - A',
-            supported_features: 0
-          }
-        },
-        'light.living_room': {
-          entity_id: 'light.living_room',
-          old_state: 'on',
-          new_state: 'off',
-          user_id: null,
-          timestamp: '2025-10-21T15:49:37.237420+00:00',
-          attributes: {
-            supported_color_modes: ['onoff'],
-            color_mode: 'onoff',
-            friendly_name: 'Living Room Light',
-            supported_features: 0
-          }
-        }
-      };
-      setLightData(lightData);
-
-      // Sensor Data (Temperature/Humidity)
-      const sensorData: { [key: string]: SensorData } = {
-        'sensor.boarda_temp_sonoff_temperature': {
-          entity_id: 'sensor.boarda_temp_sonoff_temperature',
-          old_state: '25.15',
-          new_state: '25.18',
-          user_id: null,
-          timestamp: '2025-10-21T16:01:55.195652+00:00',
-          attributes: {
-            state_class: 'measurement',
-            unit_of_measurement: '°C',
-            device_class: 'temperature',
-            friendly_name: 'BoardA_Temp_Sonoff Temperature'
-          }
-        },
-        'sensor.boarda_temp_sonoff_humidity': {
-          entity_id: 'sensor.boarda_temp_sonoff_humidity',
-          old_state: '65',
-          new_state: '65',
-          user_id: null,
-          timestamp: '2025-10-21T16:01:55.195652+00:00',
-          attributes: {
-            state_class: 'measurement',
-            unit_of_measurement: '%',
-            device_class: 'humidity',
-            friendly_name: 'BoardA_Temp_Sonoff Humidity'
-          }
-        },
-        'sensor.living_room_temperature': {
-          entity_id: 'sensor.living_room_temperature',
-          old_state: '22.5',
-          new_state: '22.5',
-          user_id: null,
-          timestamp: '2025-10-21T16:01:55.195652+00:00',
-          attributes: {
-            state_class: 'measurement',
-            unit_of_measurement: '°C',
-            device_class: 'temperature',
-            friendly_name: 'Living Room Temperature'
-          }
-        },
-        'sensor.living_room_humidity': {
-          entity_id: 'sensor.living_room_humidity',
-          old_state: '45',
-          new_state: '45',
-          user_id: null,
-          timestamp: '2025-10-21T16:01:55.195652+00:00',
-          attributes: {
-            state_class: 'measurement',
-            unit_of_measurement: '%',
-            device_class: 'humidity',
-            friendly_name: 'Living Room Humidity'
-          }
-        }
-      };
-      setSensorData(sensorData);
-
-    } catch (error) {
-      console.error('Failed to load entity data');
-    }
-  };
 
   // Helper function to get data for a specific device
   const getDeviceData = (device: SensorDevice) => {
     const entityId = device.entity;
     
     // First check binary sensors directly
-    if (binarySensorData[entityId]) {
-      return { type: 'binary', data: binarySensorData[entityId] };
+    if (haData.binarySensorData[entityId]) {
+      return { type: 'binary', data: haData.binarySensorData[entityId] };
     }
     
     // Check climate (AC)
-    if (climateData[entityId]) {
-      return { type: 'climate', data: climateData[entityId] };
+    if (haData.climateData[entityId]) {
+      return { type: 'climate', data: haData.climateData[entityId] };
     }
     
     // Check lights
-    if (lightData[entityId]) {
-      return { type: 'light', data: lightData[entityId] };
+    if (haData.lightData[entityId]) {
+      return { type: 'light', data: haData.lightData[entityId] };
     }
     
     // Check sensors
-    if (sensorData[entityId]) {
-      return { type: 'sensor', data: sensorData[entityId] };
+    if (haData.sensorData[entityId]) {
+      return { type: 'sensor', data: haData.sensorData[entityId] };
     }
     
     return { type: 'unknown', data: null };
@@ -407,40 +178,15 @@ const DashboardScreen: React.FC = () => {
 
   const toggleDevice = async (deviceId: string, deviceType: string, entityId: string) => {
     try {
-      // For lights and AC, update the state in the corresponding data store
-      if (deviceType === 'light') {
-        const currentData = lightData[entityId];
-        if (currentData) {
-          const newState = currentData.new_state === 'on' ? 'off' : 'on';
-          setLightData(prev => ({
-            ...prev,
-            [entityId]: {
-              ...currentData,
-              new_state: newState,
-              old_state: currentData.new_state
-            }
-          }));
-        }
-      } else if (deviceType === 'ac') {
-        const currentData = climateData[entityId];
-        if (currentData) {
-          const newState = currentData.new_state === 'off' ? 'heat_cool' : 'off';
-          setClimateData(prev => ({
-            ...prev,
-            [entityId]: {
-              ...currentData,
-              new_state: newState,
-              old_state: currentData.new_state
-            }
-          }));
-        }
-      }
+      console.log(`Toggling ${deviceType} device: ${entityId}`);
       
-      console.log(`Toggling ${deviceType} ${deviceId} (${entityId})`);
+      // Use the HomeAssistant service to toggle the entity
+      homeAssistantService.toggleEntity(entityId);
       
-      // TODO: Replace with actual Home Assistant API call
+      // The state will be updated automatically through the WebSocket subscription
     } catch (error) {
-      Alert.alert('Error', `Failed to toggle ${deviceType}`);
+      console.error('Toggle error:', error);
+      Alert.alert('Error', 'Failed to toggle device');
     }
   };
 
@@ -457,7 +203,7 @@ const DashboardScreen: React.FC = () => {
   const onRefresh = async () => {
     setRefreshing(true);
     await loadConfiguredDevices();
-    await loadEntityData();
+    // Entity data is now updated through WebSocket
     setRefreshing(false);
   };
 
@@ -499,11 +245,11 @@ const DashboardScreen: React.FC = () => {
       }
     }
     
-    // If no data found, check if we have any data in the binarySensorData object directly
-    const directData = binarySensorData[device.entity];
+    // If no data found, check if we have any data in the haData.binarySensorData object directly
+    const directData = haData.binarySensorData[device.entity];
     if (directData) {
       const isActive = directData.new_state === 'on';
-      
+      console.log('Direct binary sensor data found for', device.entity, device.type);
       switch (device.type) {
         case 'water':
           return { 
@@ -567,7 +313,6 @@ const DashboardScreen: React.FC = () => {
       <DashboardHeader
         avgTemperature={avgTemperature}
         avgHumidity={avgHumidity}
-        onTempHumidityDetailsPress={() => setTempHumidityModalVisible(true)}
       />
 
       {configuredDevices.length === 0 ? (
@@ -692,13 +437,61 @@ const DashboardScreen: React.FC = () => {
                 icon={icon}
                 itemsPerRow={2}
               >
-                {devices.map(camera => (
-                  <CameraCard
-                    key={camera.id}
-                    camera={camera}
-                    cardWidth={getCardWidth(2)}
-                  />
-                ))}
+                {devices.map(camera => {
+                  console.log(`Processing camera device: ${camera.name} (${camera.id})`);
+                  
+                  // Debug camera 2 specifically
+                  if (camera.id === 'camera_2') {
+                    console.log('=== CAMERA 2 DEBUG ===');
+                    console.log('Camera 2 from storage:', JSON.stringify(camera, null, 2));
+                    console.log('Available WebSocket binary sensors:', Object.keys(haData.binarySensorData));
+                  }
+                  
+                  // Get motion and occupancy sensor entities from storage (not hardcoded)
+                  let motionSensor = null;
+                  let occupancySensor = null;
+                  
+                  // Use sensor entities from camera storage configuration
+                  if (camera.motion_sensor) {
+                    motionSensor = haData.binarySensorData[camera.motion_sensor];
+                    console.log(`Looking for motion sensor: ${camera.motion_sensor}`, motionSensor ? 'FOUND' : 'NOT FOUND');
+                  }
+                  
+                  if (camera.occupancy_sensor) {
+                    occupancySensor = haData.binarySensorData[camera.occupancy_sensor];
+                    console.log(`Looking for occupancy sensor: ${camera.occupancy_sensor}`, occupancySensor ? 'FOUND' : 'NOT FOUND');
+                  }
+                  
+                  // Debug camera 2 sensor mapping
+                  if (camera.id === 'camera_2') {
+                    console.log('Camera 2 sensor mapping from storage:', camera);
+                    console.log('- Motion sensor entity:', camera.motion_sensor);
+                    console.log('- Motion sensor data:', motionSensor ? JSON.stringify(motionSensor, null, 2) : 'NOT FOUND');
+                    console.log('- Occupancy sensor entity:', camera.occupancy_sensor);
+                    console.log('- Occupancy sensor data:', occupancySensor ? JSON.stringify(occupancySensor, null, 2) : 'NOT FOUND');
+                    console.log('=== END CAMERA 2 DEBUG ===');
+                  }
+                  
+                  console.log(`Camera ${camera.name} sensors from storage:`, {
+                    motion: motionSensor ? `${motionSensor.entity_id}: ${motionSensor.new_state}` : `${camera.motion_sensor}: NOT FOUND`,
+                    occupancy: occupancySensor ? `${occupancySensor.entity_id}: ${occupancySensor.new_state}` : `${camera.occupancy_sensor}: NOT FOUND`
+                  });
+                  
+                  // Create enhanced camera object with sensor data
+                  const cameraWithSensors = {
+                    ...camera,
+                    motion_sensor: motionSensor ? { detected: motionSensor.new_state === 'on' } : { detected: false },
+                    occupancy_sensor: occupancySensor ? { detected: occupancySensor.new_state === 'on' } : { detected: false }
+                  };
+                  
+                  return (
+                    <CameraCard
+                      key={camera.id}
+                      camera={cameraWithSensors}
+                      cardWidth={getCardWidth(2)}
+                    />
+                  );
+                })}
               </DeviceSection>
             );
           })()}
@@ -779,7 +572,7 @@ const DashboardScreen: React.FC = () => {
       <TempHumidityDetailsModal
         visible={tempHumidityModalVisible}
         tempHumidityDevices={configuredDevices.filter(device => device.type === 'temp_humidity')}
-        sensorData={sensorData}
+        sensorData={haData.sensorData}
         onClose={() => setTempHumidityModalVisible(false)}
       />
     </View>
