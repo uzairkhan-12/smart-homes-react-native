@@ -2,6 +2,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { homeAssistantService } from '../../src/services/HomeAssistantService';
 import { ClimateData, SensorDevice } from '../../types';
 
 interface AcCardProps {
@@ -34,12 +35,26 @@ const AcCard: React.FC<AcCardProps> = ({
     return isActive ? '❄️' : '⛄';
   };
 
+  const handleToggle = () => {
+    if (!isOn) {
+      // When turning on, set default values: 21°C, cool mode, mid fan
+      console.log(`Setting AC ${device.entity} to default values: 21°C, cool, mid fan`);
+      homeAssistantService.updateClimateEntity(device.entity, {
+        hvac_mode: 'cool',
+        temperature: 21,
+        fan_mode: 'mid'
+      });
+    } else {
+      // When turning off, just turn off
+      console.log(`Turning off AC ${device.entity}`);
+      homeAssistantService.updateClimateEntity(device.entity, {
+        hvac_mode: 'off'
+      });
+    }
+  };
+
   return (
-    <TouchableOpacity 
-      style={[styles.card, { width: cardWidth }]}
-      onPress={() => onToggle(device.id, device.type, device.entity)}
-      activeOpacity={0.7}
-    >
+    <View style={[styles.card, { width: cardWidth }]}>
       <View style={[styles.controlCard, isDarkTheme && styles.controlCardDark]}>
         <View style={styles.controlHeader}>
           <View style={[
@@ -71,10 +86,7 @@ const AcCard: React.FC<AcCardProps> = ({
             {isOn && (
               <TouchableOpacity
                 style={[styles.settingsButton, isDarkTheme && styles.settingsButtonDark]}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  onOpenSettings(device);
-                }}
+                onPress={() => onOpenSettings(device)}
               >
                 <Ionicons 
                   name="settings-outline" 
@@ -86,7 +98,7 @@ const AcCard: React.FC<AcCardProps> = ({
             <View style={styles.toggleWrapper}>
               <Switch
                 value={isOn}
-                onValueChange={() => onToggle(device.id, device.type, device.entity)}
+                onValueChange={handleToggle}
                 trackColor={{ false: '#767577', true: isDarkTheme ? '#4CAF50' : '#81C784' }}
                 thumbColor={isOn ? (isDarkTheme ? '#4CAF50' : '#2E7D32') : (isDarkTheme ? '#aaa' : '#f4f3f4')}
                 ios_backgroundColor="#3e3e3e"
@@ -96,7 +108,7 @@ const AcCard: React.FC<AcCardProps> = ({
           </View>
         </View>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 };
 

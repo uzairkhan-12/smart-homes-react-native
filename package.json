@@ -8,7 +8,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "cors-proxy": "node ./scripts/cors-proxy.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -41,8 +42,11 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
+    "cors": "^2.8.5",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
+    "express": "^5.1.0",
+    "http-proxy-middleware": "^3.0.5",
     "typescript": "~5.9.2"
   },
   "private": true

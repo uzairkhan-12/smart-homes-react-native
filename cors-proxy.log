@@ -1,0 +1,542 @@
+
+> smart-home-sensors@1.0.0 cors-proxy
+> node ./scripts/cors-proxy.js
+
+🚀 CORS Proxy Server running on http://0.0.0.0:8080
+📡 Proxying /ha-api/* to http://192.168.100.60:8123/api/*
+🔍 Health check: http://localhost:8080/health
+📋 Example: http://localhost:8080/ha-api/states
+📱 Mobile access: http://192.168.100.216:8080/ha-api/states
+[PROXY] GET /ha-api -> http://192.168.100.60:8123/api/
+[PROXY] Response: 200 OK for /ha-api
+[PROXY] GET /ha-api/states/radar%203 -> http://192.168.100.60:8123/api/states/radar%203
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%203
+[PROXY] GET /ha-api/states/test -> http://192.168.100.60:8123/api/states/test
+[PROXY] GET /ha-api/states/binary_sensor.boardb_presence_tu_pressure -> http://192.168.100.60:8123/api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] GET /ha-api/states/radar%202 -> http://192.168.100.60:8123/api/states/radar%202
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_motion -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_motion
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%202
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_temperature -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] Response: 404 Not Found for /ha-api/states/test
+[PROXY] Response: 404 Not Found for /ha-api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_motion
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_humidity -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] GET /ha-api/states/light.boarda_buttonswitch_a -> http://192.168.100.60:8123/api/states/light.boarda_buttonswitch_a
+[PROXY] GET /ha-api/states/light.office_light_grill43 -> http://192.168.100.60:8123/api/states/light.office_light_grill43
+[PROXY] GET /ha-api/states/camera1 -> http://192.168.100.60:8123/api/states/camera1
+[PROXY] Response: 200 OK for /ha-api/states/light.boarda_buttonswitch_a
+[PROXY] Response: 200 OK for /ha-api/states/light.office_light_grill43
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_motion -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_motion
+[PROXY] Response: 404 Not Found for /ha-api/states/camera1
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_motion
+[PROXY] GET /ha-api/states/camera%202 -> http://192.168.100.60:8123/api/states/camera%202
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] GET /ha-api/states/climate.office_ac -> http://192.168.100.60:8123/api/states/climate.office_ac
+[PROXY] Response: 404 Not Found for /ha-api/states/camera%202
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] Response: 200 OK for /ha-api/states/climate.office_ac
+[PROXY] POST /ha-api/services/climate/set_hvac_mode -> http://192.168.100.60:8123/api/services/climate/set_hvac_mode
+[PROXY] Body: {"entity_id":"climate.office_ac","hvac_mode":"fan_only"}
+[PROXY] Response: 401 Unauthorized for /ha-api/services/climate/set_hvac_mode
+[PROXY] POST /ha-api/services/light/turn_on -> http://192.168.100.60:8123/api/services/light/turn_on
+[PROXY] Body: {"entity_id":"light.boarda_buttonswitch_a"}
+[PROXY] Response: 200 OK for /ha-api/services/light/turn_on
+[PROXY] POST /ha-api/services/light/turn_off -> http://192.168.100.60:8123/api/services/light/turn_off
+[PROXY] Body: {"entity_id":"light.office_light_grill43"}
+[PROXY] Response: 200 OK for /ha-api/services/light/turn_off
+[PROXY] POST /ha-api/services/light/turn_on -> http://192.168.100.60:8123/api/services/light/turn_on
+[PROXY] Body: {"entity_id":"light.office_light_grill43"}
+[PROXY] Response: 200 OK for /ha-api/services/light/turn_on
+[PROXY] GET /ha-api -> http://192.168.100.60:8123/api/
+[PROXY] Response: 200 OK for /ha-api
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_motion -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_motion
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_motion
+[PROXY] GET /ha-api/states/test -> http://192.168.100.60:8123/api/states/test
+[PROXY] GET /ha-api/states/binary_sensor.boardb_presence_tu_pressure -> http://192.168.100.60:8123/api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] GET /ha-api/states/radar%202 -> http://192.168.100.60:8123/api/states/radar%202
+[PROXY] GET /ha-api/states/radar%203 -> http://192.168.100.60:8123/api/states/radar%203
+[PROXY] Response: 404 Not Found for /ha-api/states/test
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_temperature -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] Response: 404 Not Found for /ha-api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_humidity -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%202
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%203
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] GET /ha-api/states/light.boarda_buttonswitch_a -> http://192.168.100.60:8123/api/states/light.boarda_buttonswitch_a
+[PROXY] GET /ha-api/states/light.office_light_grill43 -> http://192.168.100.60:8123/api/states/light.office_light_grill43
+[PROXY] GET /ha-api/states/camera1 -> http://192.168.100.60:8123/api/states/camera1
+[PROXY] Response: 200 OK for /ha-api/states/light.boarda_buttonswitch_a
+[PROXY] Response: 200 OK for /ha-api/states/light.office_light_grill43
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_motion -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_motion
+[PROXY] Response: 404 Not Found for /ha-api/states/camera1
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_motion
+[PROXY] GET /ha-api/states/camera%202 -> http://192.168.100.60:8123/api/states/camera%202
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] Response: 404 Not Found for /ha-api/states/camera%202
+[PROXY] GET /ha-api/states/climate.office_ac -> http://192.168.100.60:8123/api/states/climate.office_ac
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] Response: 200 OK for /ha-api/states/climate.office_ac
+[PROXY] POST /ha-api/services/light/turn_off -> http://192.168.100.60:8123/api/services/light/turn_off
+[PROXY] Body: {"entity_id":"light.boarda_buttonswitch_a"}
+[PROXY] Response: 200 OK for /ha-api/services/light/turn_off
+[PROXY] POST /ha-api/services/light/turn_on -> http://192.168.100.60:8123/api/services/light/turn_on
+[PROXY] Body: {"entity_id":"light.boarda_buttonswitch_a"}
+[PROXY] Response: 200 OK for /ha-api/services/light/turn_on
+[PROXY] GET /ha-api -> http://192.168.100.60:8123/api/
+[PROXY] Response: 200 OK for /ha-api
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_motion -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_motion
+[PROXY] GET /ha-api/states/binary_sensor.boardb_presence_tu_pressure -> http://192.168.100.60:8123/api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_motion
+[PROXY] GET /ha-api/states/radar%202 -> http://192.168.100.60:8123/api/states/radar%202
+[PROXY] GET /ha-api/states/test -> http://192.168.100.60:8123/api/states/test
+[PROXY] GET /ha-api/states/radar%203 -> http://192.168.100.60:8123/api/states/radar%203
+[PROXY] Response: 404 Not Found for /ha-api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] Response: 404 Not Found for /ha-api/states/test
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_temperature -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%202
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%203
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_humidity -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] GET /ha-api/states/light.boarda_buttonswitch_a -> http://192.168.100.60:8123/api/states/light.boarda_buttonswitch_a
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] Response: 200 OK for /ha-api/states/light.boarda_buttonswitch_a
+[PROXY] GET /ha-api/states/light.office_light_grill43 -> http://192.168.100.60:8123/api/states/light.office_light_grill43
+[PROXY] GET /ha-api/states/camera1 -> http://192.168.100.60:8123/api/states/camera1
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_motion -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_motion
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] Response: 200 OK for /ha-api/states/light.office_light_grill43
+[PROXY] Response: 404 Not Found for /ha-api/states/camera1
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_motion
+[PROXY] GET /ha-api/states/camera%202 -> http://192.168.100.60:8123/api/states/camera%202
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] Response: 404 Not Found for /ha-api/states/camera%202
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] GET /ha-api/states/climate.office_ac -> http://192.168.100.60:8123/api/states/climate.office_ac
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] Response: 200 OK for /ha-api/states/climate.office_ac
+[PROXY] GET /ha-api -> http://192.168.100.60:8123/api/
+[PROXY] Response: 200 OK for /ha-api
+[PROXY] GET /ha-api -> http://192.168.100.60:8123/api/
+[PROXY] Response: 200 OK for /ha-api
+[PROXY] GET /ha-api -> http://192.168.100.60:8123/api/
+[PROXY] Response: 200 OK for /ha-api
+[PROXY] GET /ha-api -> http://192.168.100.60:8123/api/
+[PROXY] Response: 200 OK for /ha-api
+[PROXY] GET /ha-api -> http://192.168.100.60:8123/api/
+[PROXY] Response: 200 OK for /ha-api
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_motion -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_motion
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_motion
+[PROXY] GET /ha-api/states/radar%203 -> http://192.168.100.60:8123/api/states/radar%203
+[PROXY] GET /ha-api/states/test -> http://192.168.100.60:8123/api/states/test
+[PROXY] GET /ha-api/states/radar%202 -> http://192.168.100.60:8123/api/states/radar%202
+[PROXY] GET /ha-api/states/binary_sensor.boardb_presence_tu_pressure -> http://192.168.100.60:8123/api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%203
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_temperature -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] Response: 404 Not Found for /ha-api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] Response: 404 Not Found for /ha-api/states/test
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%202
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_humidity -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] GET /ha-api/states/light.boarda_buttonswitch_a -> http://192.168.100.60:8123/api/states/light.boarda_buttonswitch_a
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] Response: 200 OK for /ha-api/states/light.boarda_buttonswitch_a
+[PROXY] GET /ha-api/states/light.office_light_grill43 -> http://192.168.100.60:8123/api/states/light.office_light_grill43
+[PROXY] GET /ha-api/states/camera1 -> http://192.168.100.60:8123/api/states/camera1
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_motion -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_motion
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] Response: 200 OK for /ha-api/states/light.office_light_grill43
+[PROXY] GET /ha-api/states/camera%202 -> http://192.168.100.60:8123/api/states/camera%202
+[PROXY] Response: 404 Not Found for /ha-api/states/camera1
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_motion
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] Response: 404 Not Found for /ha-api/states/camera%202
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] GET /ha-api/states/climate.office_ac -> http://192.168.100.60:8123/api/states/climate.office_ac
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] Response: 200 OK for /ha-api/states/climate.office_ac
+[PROXY] POST /ha-api/services/climate/set_temperature -> http://192.168.100.60:8123/api/services/climate/set_temperature
+[PROXY] Body: {"entity_id":"climate.office_ac","temperature":21}
+[PROXY] Response: 200 OK for /ha-api/services/climate/set_temperature
+[PROXY] POST /ha-api/services/climate/set_fan_mode -> http://192.168.100.60:8123/api/services/climate/set_fan_mode
+[PROXY] Body: {"entity_id":"climate.office_ac","fan_mode":"mid"}
+[PROXY] Response: 200 OK for /ha-api/services/climate/set_fan_mode
+[PROXY] POST /ha-api/services/climate/set_hvac_mode -> http://192.168.100.60:8123/api/services/climate/set_hvac_mode
+[PROXY] Body: {"entity_id":"climate.office_ac","hvac_mode":"cool"}
+[PROXY] Response: 200 OK for /ha-api/services/climate/set_hvac_mode
+[PROXY] POST /ha-api/services/climate/set_hvac_mode -> http://192.168.100.60:8123/api/services/climate/set_hvac_mode
+[PROXY] Body: {"entity_id":"climate.office_ac","hvac_mode":"off"}
+[PROXY] Response: 200 OK for /ha-api/services/climate/set_hvac_mode
+[PROXY] GET /ha-api -> http://192.168.100.60:8123/api/
+[PROXY] Response: 200 OK for /ha-api
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_motion -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_motion
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_motion
+[PROXY] GET /ha-api/states/binary_sensor.boardb_presence_tu_pressure -> http://192.168.100.60:8123/api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] GET /ha-api/states/test -> http://192.168.100.60:8123/api/states/test
+[PROXY] GET /ha-api/states/radar%202 -> http://192.168.100.60:8123/api/states/radar%202
+[PROXY] GET /ha-api/states/radar%203 -> http://192.168.100.60:8123/api/states/radar%203
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%202
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_temperature -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%203
+[PROXY] Response: 404 Not Found for /ha-api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] Response: 404 Not Found for /ha-api/states/test
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_humidity -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] GET /ha-api/states/light.boarda_buttonswitch_a -> http://192.168.100.60:8123/api/states/light.boarda_buttonswitch_a
+[PROXY] GET /ha-api/states/light.office_light_grill43 -> http://192.168.100.60:8123/api/states/light.office_light_grill43
+[PROXY] GET /ha-api/states/camera1 -> http://192.168.100.60:8123/api/states/camera1
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_motion -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_motion
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] Response: 200 OK for /ha-api/states/light.boarda_buttonswitch_a
+[PROXY] Response: 200 OK for /ha-api/states/light.office_light_grill43
+[PROXY] Response: 404 Not Found for /ha-api/states/camera1
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_motion
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] GET /ha-api/states/camera%202 -> http://192.168.100.60:8123/api/states/camera%202
+[PROXY] Response: 404 Not Found for /ha-api/states/camera%202
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] GET /ha-api/states/climate.office_ac -> http://192.168.100.60:8123/api/states/climate.office_ac
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] Response: 200 OK for /ha-api/states/climate.office_ac
+[PROXY] GET /ha-api -> http://192.168.100.60:8123/api/
+[PROXY] Response: 200 OK for /ha-api
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_motion -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_motion
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_motion
+[PROXY] GET /ha-api/states/binary_sensor.boardb_presence_tu_pressure -> http://192.168.100.60:8123/api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] GET /ha-api/states/test -> http://192.168.100.60:8123/api/states/test
+[PROXY] GET /ha-api/states/radar%202 -> http://192.168.100.60:8123/api/states/radar%202
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_temperature -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] GET /ha-api/states/radar%203 -> http://192.168.100.60:8123/api/states/radar%203
+[PROXY] Response: 404 Not Found for /ha-api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] Response: 404 Not Found for /ha-api/states/test
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%202
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_humidity -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%203
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] GET /ha-api/states/light.boarda_buttonswitch_a -> http://192.168.100.60:8123/api/states/light.boarda_buttonswitch_a
+[PROXY] GET /ha-api/states/light.office_light_grill43 -> http://192.168.100.60:8123/api/states/light.office_light_grill43
+[PROXY] GET /ha-api/states/camera1 -> http://192.168.100.60:8123/api/states/camera1
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_motion -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_motion
+[PROXY] Response: 200 OK for /ha-api/states/light.boarda_buttonswitch_a
+[PROXY] Response: 200 OK for /ha-api/states/light.office_light_grill43
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] Response: 404 Not Found for /ha-api/states/camera1
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_motion
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] GET /ha-api/states/camera%202 -> http://192.168.100.60:8123/api/states/camera%202
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] GET /ha-api/states/climate.office_ac -> http://192.168.100.60:8123/api/states/climate.office_ac
+[PROXY] Response: 404 Not Found for /ha-api/states/camera%202
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] Response: 200 OK for /ha-api/states/climate.office_ac
+[PROXY] GET /ha-api -> http://192.168.100.60:8123/api/
+[PROXY] Response: 200 OK for /ha-api
+[PROXY] GET /ha-api -> http://192.168.100.60:8123/api/
+[PROXY] Response: 200 OK for /ha-api
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_motion -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_motion
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_motion
+[PROXY] GET /ha-api/states/binary_sensor.boardb_presence_tu_pressure -> http://192.168.100.60:8123/api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] GET /ha-api/states/test -> http://192.168.100.60:8123/api/states/test
+[PROXY] GET /ha-api/states/radar%202 -> http://192.168.100.60:8123/api/states/radar%202
+[PROXY] GET /ha-api/states/radar%203 -> http://192.168.100.60:8123/api/states/radar%203
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_temperature -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] Response: 404 Not Found for /ha-api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%202
+[PROXY] Response: 404 Not Found for /ha-api/states/test
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%203
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_humidity -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] GET /ha-api/states/light.boarda_buttonswitch_a -> http://192.168.100.60:8123/api/states/light.boarda_buttonswitch_a
+[PROXY] GET /ha-api/states/light.office_light_grill43 -> http://192.168.100.60:8123/api/states/light.office_light_grill43
+[PROXY] GET /ha-api/states/camera1 -> http://192.168.100.60:8123/api/states/camera1
+[PROXY] Response: 200 OK for /ha-api/states/light.boarda_buttonswitch_a
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_motion -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_motion
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] Response: 200 OK for /ha-api/states/light.office_light_grill43
+[PROXY] Response: 404 Not Found for /ha-api/states/camera1
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_motion
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] GET /ha-api/states/camera%202 -> http://192.168.100.60:8123/api/states/camera%202
+[PROXY] Response: 404 Not Found for /ha-api/states/camera%202
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] GET /ha-api/states/climate.office_ac -> http://192.168.100.60:8123/api/states/climate.office_ac
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] Response: 200 OK for /ha-api/states/climate.office_ac
+[PROXY] GET /ha-api -> http://192.168.100.60:8123/api/
+[PROXY] Response: 200 OK for /ha-api
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_motion -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_motion
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_motion
+[PROXY] GET /ha-api/states/binary_sensor.boardb_presence_tu_pressure -> http://192.168.100.60:8123/api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] GET /ha-api/states/test -> http://192.168.100.60:8123/api/states/test
+[PROXY] GET /ha-api/states/radar%203 -> http://192.168.100.60:8123/api/states/radar%203
+[PROXY] Response: 404 Not Found for /ha-api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] GET /ha-api/states/radar%202 -> http://192.168.100.60:8123/api/states/radar%202
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_temperature -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] Response: 404 Not Found for /ha-api/states/test
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%203
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%202
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_humidity -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] GET /ha-api/states/light.boarda_buttonswitch_a -> http://192.168.100.60:8123/api/states/light.boarda_buttonswitch_a
+[PROXY] GET /ha-api/states/light.office_light_grill43 -> http://192.168.100.60:8123/api/states/light.office_light_grill43
+[PROXY] Response: 200 OK for /ha-api/states/light.boarda_buttonswitch_a
+[PROXY] GET /ha-api/states/camera1 -> http://192.168.100.60:8123/api/states/camera1
+[PROXY] Response: 200 OK for /ha-api/states/light.office_light_grill43
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_motion -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_motion
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] Response: 404 Not Found for /ha-api/states/camera1
+[PROXY] GET /ha-api/states/camera%202 -> http://192.168.100.60:8123/api/states/camera%202
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_motion
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] Response: 404 Not Found for /ha-api/states/camera%202
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] GET /ha-api/states/climate.office_ac -> http://192.168.100.60:8123/api/states/climate.office_ac
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] Response: 200 OK for /ha-api/states/climate.office_ac
+[PROXY] GET /ha-api -> http://192.168.100.60:8123/api/
+[PROXY] Response: 200 OK for /ha-api
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_motion -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_motion
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_motion
+[PROXY] GET /ha-api/states/binary_sensor.boardb_presence_tu_pressure -> http://192.168.100.60:8123/api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] GET /ha-api/states/test -> http://192.168.100.60:8123/api/states/test
+[PROXY] GET /ha-api/states/radar%202 -> http://192.168.100.60:8123/api/states/radar%202
+[PROXY] GET /ha-api/states/radar%203 -> http://192.168.100.60:8123/api/states/radar%203
+[PROXY] Response: 404 Not Found for /ha-api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_temperature -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] Response: 404 Not Found for /ha-api/states/test
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%202
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%203
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_humidity -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] GET /ha-api/states/light.office_light_grill43 -> http://192.168.100.60:8123/api/states/light.office_light_grill43
+[PROXY] GET /ha-api/states/light.boarda_buttonswitch_a -> http://192.168.100.60:8123/api/states/light.boarda_buttonswitch_a
+[PROXY] GET /ha-api/states/camera1 -> http://192.168.100.60:8123/api/states/camera1
+[PROXY] Response: 200 OK for /ha-api/states/light.office_light_grill43
+[PROXY] Response: 200 OK for /ha-api/states/light.boarda_buttonswitch_a
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_motion -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_motion
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] Response: 404 Not Found for /ha-api/states/camera1
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_motion
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] GET /ha-api/states/camera%202 -> http://192.168.100.60:8123/api/states/camera%202
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] GET /ha-api/states/climate.office_ac -> http://192.168.100.60:8123/api/states/climate.office_ac
+[PROXY] Response: 404 Not Found for /ha-api/states/camera%202
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] Response: 200 OK for /ha-api/states/climate.office_ac
+[PROXY] GET /ha-api -> http://192.168.100.60:8123/api/
+[PROXY] Response: 200 OK for /ha-api
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_motion -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_motion
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_motion
+[PROXY] GET /ha-api/states/binary_sensor.boardb_presence_tu_pressure -> http://192.168.100.60:8123/api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] GET /ha-api/states/test -> http://192.168.100.60:8123/api/states/test
+[PROXY] GET /ha-api/states/radar%202 -> http://192.168.100.60:8123/api/states/radar%202
+[PROXY] Response: 404 Not Found for /ha-api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] GET /ha-api/states/radar4 -> http://192.168.100.60:8123/api/states/radar4
+[PROXY] Response: 404 Not Found for /ha-api/states/radar4
+[PROXY] GET /ha-api/states/radar%203 -> http://192.168.100.60:8123/api/states/radar%203
+[PROXY] Response: 404 Not Found for /ha-api/states/test
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%202
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%203
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_temperature -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_humidity -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] GET /ha-api/states/light.office_light_grill43 -> http://192.168.100.60:8123/api/states/light.office_light_grill43
+[PROXY] GET /ha-api/states/light.boarda_buttonswitch_a -> http://192.168.100.60:8123/api/states/light.boarda_buttonswitch_a
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] GET /ha-api/states/camera1 -> http://192.168.100.60:8123/api/states/camera1
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_motion -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_motion
+[PROXY] Response: 200 OK for /ha-api/states/light.office_light_grill43
+[PROXY] Response: 200 OK for /ha-api/states/light.boarda_buttonswitch_a
+[PROXY] Response: 404 Not Found for /ha-api/states/camera1
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] GET /ha-api/states/camera%202 -> http://192.168.100.60:8123/api/states/camera%202
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_motion
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] GET /ha-api/states/climate.office_ac -> http://192.168.100.60:8123/api/states/climate.office_ac
+[PROXY] Response: 404 Not Found for /ha-api/states/camera%202
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] Response: 200 OK for /ha-api/states/climate.office_ac
+[PROXY] POST /ha-api/services/light/turn_off -> http://192.168.100.60:8123/api/services/light/turn_off
+[PROXY] Body: {"entity_id":"light.boarda_buttonswitch_a"}
+[PROXY] Response: 200 OK for /ha-api/services/light/turn_off
+[PROXY] POST /ha-api/services/light/turn_on -> http://192.168.100.60:8123/api/services/light/turn_on
+[PROXY] Body: {"entity_id":"light.boarda_buttonswitch_a"}
+[PROXY] Response: 200 OK for /ha-api/services/light/turn_on
+[PROXY] POST /ha-api/services/climate/set_temperature -> http://192.168.100.60:8123/api/services/climate/set_temperature
+[PROXY] Body: {"entity_id":"climate.office_ac","temperature":21}
+[PROXY] Response: 200 OK for /ha-api/services/climate/set_temperature
+[PROXY] POST /ha-api/services/climate/set_fan_mode -> http://192.168.100.60:8123/api/services/climate/set_fan_mode
+[PROXY] Body: {"entity_id":"climate.office_ac","fan_mode":"mid"}
+[PROXY] Response: 200 OK for /ha-api/services/climate/set_fan_mode
+[PROXY] POST /ha-api/services/climate/set_hvac_mode -> http://192.168.100.60:8123/api/services/climate/set_hvac_mode
+[PROXY] Body: {"entity_id":"climate.office_ac","hvac_mode":"cool"}
+[PROXY] Response: 200 OK for /ha-api/services/climate/set_hvac_mode
+[PROXY] POST /ha-api/services/climate/set_hvac_mode -> http://192.168.100.60:8123/api/services/climate/set_hvac_mode
+[PROXY] Body: {"entity_id":"climate.office_ac","hvac_mode":"off"}
+[PROXY] Response: 200 OK for /ha-api/services/climate/set_hvac_mode
+[PROXY] POST /ha-api/services/light/turn_off -> http://192.168.100.60:8123/api/services/light/turn_off
+[PROXY] Body: {"entity_id":"light.boarda_buttonswitch_a"}
+[PROXY] Response: 200 OK for /ha-api/services/light/turn_off
+[PROXY] POST /ha-api/services/light/turn_on -> http://192.168.100.60:8123/api/services/light/turn_on
+[PROXY] Body: {"entity_id":"light.boarda_buttonswitch_a"}
+[PROXY] Response: 200 OK for /ha-api/services/light/turn_on
+[PROXY] POST /ha-api/services/light/turn_off -> http://192.168.100.60:8123/api/services/light/turn_off
+[PROXY] Body: {"entity_id":"light.boarda_buttonswitch_a"}
+[PROXY] Response: 200 OK for /ha-api/services/light/turn_off
+[PROXY] POST /ha-api/services/light/turn_on -> http://192.168.100.60:8123/api/services/light/turn_on
+[PROXY] Body: {"entity_id":"light.boarda_buttonswitch_a"}
+[PROXY] Response: 200 OK for /ha-api/services/light/turn_on
+[PROXY] POST /ha-api/services/light/turn_off -> http://192.168.100.60:8123/api/services/light/turn_off
+[PROXY] Body: {"entity_id":"light.office_light_grill43"}
+[PROXY] Response: 200 OK for /ha-api/services/light/turn_off
+[PROXY] POST /ha-api/services/light/turn_on -> http://192.168.100.60:8123/api/services/light/turn_on
+[PROXY] Body: {"entity_id":"light.office_light_grill43"}
+[PROXY] Response: 200 OK for /ha-api/services/light/turn_on
+[PROXY] POST /ha-api/services/climate/set_temperature -> http://192.168.100.60:8123/api/services/climate/set_temperature
+[PROXY] Body: {"entity_id":"climate.office_ac","temperature":21}
+[PROXY] Response: 200 OK for /ha-api/services/climate/set_temperature
+[PROXY] POST /ha-api/services/climate/set_fan_mode -> http://192.168.100.60:8123/api/services/climate/set_fan_mode
+[PROXY] Body: {"entity_id":"climate.office_ac","fan_mode":"mid"}
+[PROXY] Response: 200 OK for /ha-api/services/climate/set_fan_mode
+[PROXY] POST /ha-api/services/climate/set_hvac_mode -> http://192.168.100.60:8123/api/services/climate/set_hvac_mode
+[PROXY] Body: {"entity_id":"climate.office_ac","hvac_mode":"cool"}
+[PROXY] Response: 200 OK for /ha-api/services/climate/set_hvac_mode
+[PROXY] POST /ha-api/services/climate/set_temperature -> http://192.168.100.60:8123/api/services/climate/set_temperature
+[PROXY] Body: {"entity_id":"climate.office_ac","temperature":22}
+[PROXY] Response: 200 OK for /ha-api/services/climate/set_temperature
+[PROXY] POST /ha-api/services/climate/set_fan_mode -> http://192.168.100.60:8123/api/services/climate/set_fan_mode
+[PROXY] Body: {"entity_id":"climate.office_ac","fan_mode":"high"}
+[PROXY] Response: 200 OK for /ha-api/services/climate/set_fan_mode
+[PROXY] POST /ha-api/services/climate/set_temperature -> http://192.168.100.60:8123/api/services/climate/set_temperature
+[PROXY] Body: {"entity_id":"climate.office_ac","temperature":21}
+[PROXY] Response: 200 OK for /ha-api/services/climate/set_temperature
+[PROXY] POST /ha-api/services/climate/set_hvac_mode -> http://192.168.100.60:8123/api/services/climate/set_hvac_mode
+[PROXY] Body: {"entity_id":"climate.office_ac","hvac_mode":"off"}
+[PROXY] Response: 200 OK for /ha-api/services/climate/set_hvac_mode
+[PROXY] GET /ha-api -> http://192.168.100.60:8123/api/
+[PROXY] Response: 200 OK for /ha-api
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_motion -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_motion
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_motion
+[PROXY] GET /ha-api/states/test -> http://192.168.100.60:8123/api/states/test
+[PROXY] GET /ha-api/states/binary_sensor.boardb_presence_tu_pressure -> http://192.168.100.60:8123/api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] GET /ha-api/states/radar%203 -> http://192.168.100.60:8123/api/states/radar%203
+[PROXY] GET /ha-api/states/radar%202 -> http://192.168.100.60:8123/api/states/radar%202
+[PROXY] GET /ha-api/states/radar4 -> http://192.168.100.60:8123/api/states/radar4
+[PROXY] Response: 404 Not Found for /ha-api/states/test
+[PROXY] Response: 404 Not Found for /ha-api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%203
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%202
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_temperature -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] Response: 404 Not Found for /ha-api/states/radar4
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_humidity -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] GET /ha-api/states/light.boarda_buttonswitch_a -> http://192.168.100.60:8123/api/states/light.boarda_buttonswitch_a
+[PROXY] GET /ha-api/states/light.office_light_grill43 -> http://192.168.100.60:8123/api/states/light.office_light_grill43
+[PROXY] GET /ha-api/states/camera1 -> http://192.168.100.60:8123/api/states/camera1
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_motion -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_motion
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] Response: 200 OK for /ha-api/states/light.boarda_buttonswitch_a
+[PROXY] Response: 200 OK for /ha-api/states/light.office_light_grill43
+[PROXY] Response: 404 Not Found for /ha-api/states/camera1
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_motion
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] GET /ha-api/states/camera%202 -> http://192.168.100.60:8123/api/states/camera%202
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] GET /ha-api/states/climate.office_ac -> http://192.168.100.60:8123/api/states/climate.office_ac
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] Response: 404 Not Found for /ha-api/states/camera%202
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] Response: 200 OK for /ha-api/states/climate.office_ac
+[PROXY] POST /ha-api/services/light/turn_off -> http://192.168.100.60:8123/api/services/light/turn_off
+[PROXY] Body: {"entity_id":"light.office_light_grill43"}
+[PROXY] Response: 200 OK for /ha-api/services/light/turn_off
+[PROXY] POST /ha-api/services/light/turn_on -> http://192.168.100.60:8123/api/services/light/turn_on
+[PROXY] Body: {"entity_id":"light.office_light_grill43"}
+[PROXY] Response: 200 OK for /ha-api/services/light/turn_on
+[PROXY] GET /ha-api -> http://192.168.100.60:8123/api/
+[PROXY] Response: 200 OK for /ha-api
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_motion -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_motion
+[PROXY] GET /ha-api/states/binary_sensor.boardb_presence_tu_pressure -> http://192.168.100.60:8123/api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] GET /ha-api/states/test -> http://192.168.100.60:8123/api/states/test
+[PROXY] GET /ha-api/states/radar%203 -> http://192.168.100.60:8123/api/states/radar%203
+[PROXY] GET /ha-api/states/radar%202 -> http://192.168.100.60:8123/api/states/radar%202
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_motion
+[PROXY] GET /ha-api/states/radar4 -> http://192.168.100.60:8123/api/states/radar4
+[PROXY] Response: 404 Not Found for /ha-api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] Response: 404 Not Found for /ha-api/states/test
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%203
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%202
+[PROXY] Response: 404 Not Found for /ha-api/states/radar4
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_temperature -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_humidity -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] GET /ha-api/states/light.boarda_buttonswitch_a -> http://192.168.100.60:8123/api/states/light.boarda_buttonswitch_a
+[PROXY] GET /ha-api/states/light.office_light_grill43 -> http://192.168.100.60:8123/api/states/light.office_light_grill43
+[PROXY] GET /ha-api/states/camera1 -> http://192.168.100.60:8123/api/states/camera1
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] Response: 200 OK for /ha-api/states/light.boarda_buttonswitch_a
+[PROXY] Response: 200 OK for /ha-api/states/light.office_light_grill43
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_motion -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_motion
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] Response: 404 Not Found for /ha-api/states/camera1
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_motion
+[PROXY] GET /ha-api/states/camera%202 -> http://192.168.100.60:8123/api/states/camera%202
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] GET /ha-api/states/climate.office_ac -> http://192.168.100.60:8123/api/states/climate.office_ac
+[PROXY] Response: 404 Not Found for /ha-api/states/camera%202
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] Response: 200 OK for /ha-api/states/climate.office_ac
+[PROXY] POST /ha-api/services/light/turn_off -> http://192.168.100.60:8123/api/services/light/turn_off
+[PROXY] Body: {"entity_id":"light.office_light_grill43"}
+[PROXY] Response: 200 OK for /ha-api/services/light/turn_off
+[PROXY] GET /ha-api -> http://192.168.100.60:8123/api/
+[PROXY] Response: 200 OK for /ha-api
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_motion -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_motion
+[PROXY] GET /ha-api/states/binary_sensor.boardb_presence_tu_pressure -> http://192.168.100.60:8123/api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] GET /ha-api/states/radar%202 -> http://192.168.100.60:8123/api/states/radar%202
+[PROXY] GET /ha-api/states/test -> http://192.168.100.60:8123/api/states/test
+[PROXY] GET /ha-api/states/radar%203 -> http://192.168.100.60:8123/api/states/radar%203
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_motion
+[PROXY] Response: 404 Not Found for /ha-api/states/binary_sensor.boardb_presence_tu_pressure
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%202
+[PROXY] Response: 404 Not Found for /ha-api/states/test
+[PROXY] Response: 404 Not Found for /ha-api/states/radar%203
+[PROXY] GET /ha-api/states/radar4 -> http://192.168.100.60:8123/api/states/radar4
+[PROXY] Response: 404 Not Found for /ha-api/states/radar4
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_temperature -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] GET /ha-api/states/sensor.boarda_temp_sonoff_humidity -> http://192.168.100.60:8123/api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] GET /ha-api/states/light.boarda_buttonswitch_a -> http://192.168.100.60:8123/api/states/light.boarda_buttonswitch_a
+[PROXY] GET /ha-api/states/light.office_light_grill43 -> http://192.168.100.60:8123/api/states/light.office_light_grill43
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_temperature
+[PROXY] GET /ha-api/states/camera1 -> http://192.168.100.60:8123/api/states/camera1
+[PROXY] Response: 200 OK for /ha-api/states/sensor.boarda_temp_sonoff_humidity
+[PROXY] Response: 200 OK for /ha-api/states/light.boarda_buttonswitch_a
+[PROXY] Response: 200 OK for /ha-api/states/light.office_light_grill43
+[PROXY] Response: 404 Not Found for /ha-api/states/camera1
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_motion -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_motion
+[PROXY] GET /ha-api/states/binary_sensor.frontdoor_1_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] GET /ha-api/states/camera%202 -> http://192.168.100.60:8123/api/states/camera%202
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_motion
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.frontdoor_1_person_occupancy
+[PROXY] GET /ha-api/states/binary_sensor.office_demo_person_occupancy -> http://192.168.100.60:8123/api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] GET /ha-api/states/climate.office_ac -> http://192.168.100.60:8123/api/states/climate.office_ac
+[PROXY] Response: 404 Not Found for /ha-api/states/camera%202
+[PROXY] Response: 200 OK for /ha-api/states/binary_sensor.office_demo_person_occupancy
+[PROXY] Response: 200 OK for /ha-api/states/climate.office_ac
+[PROXY] POST /ha-api/services/light/turn_on -> http://192.168.100.60:8123/api/services/light/turn_on
+[PROXY] Body: {"entity_id":"light.office_light_grill43"}
+[PROXY] Response: 200 OK for /ha-api/services/light/turn_on

@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import HomeAssistantConfigModal from '../../components/Modals/HomeAssistantConfigModal';
 import { deviceStorageService } from '../services/DeviceStorageService';
 import { SensorDevice, StoredDevices } from '../types';
 
@@ -31,6 +32,7 @@ const SettingsScreen: React.FC = () => {
   const { isDark: isDarkTheme } = useTheme();
   const [devices, setDevices] = useState<StoredDevices | null>(null);
   const [loading, setLoading] = useState(true);
+  const [haConfigModalVisible, setHaConfigModalVisible] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<CollapsibleSection>({
     waterSensors: true,
     radarSensors: true,
@@ -48,6 +50,9 @@ const SettingsScreen: React.FC = () => {
 
   const loadDevices = async () => {
     try {
+      // Ensure radar sensors count is correct (migration helper)
+      await deviceStorageService.ensureRadarSensorsCount();
+      
       const loadedDevices = await deviceStorageService.loadDevices();
       setDevices(loadedDevices);
     } catch (error) {
@@ -286,6 +291,13 @@ const SettingsScreen: React.FC = () => {
               <Ionicons name="contract-outline" size={16} color={isDarkTheme ? "#fff" : "#007AFF"} />
               <Text style={[styles.quickActionText, isDarkTheme && styles.textDark]}>Collapse All</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickActionButton, isDarkTheme && styles.quickActionButtonDark]}
+              onPress={() => setHaConfigModalVisible(true)}
+            >
+              <Ionicons name="settings-outline" size={16} color={isDarkTheme ? "#fff" : "#007AFF"} />
+              <Text style={[styles.quickActionText, isDarkTheme && styles.textDark]}>HA Config</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -311,6 +323,12 @@ const SettingsScreen: React.FC = () => {
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
+      
+      {/* Home Assistant Configuration Modal */}
+      <HomeAssistantConfigModal
+        visible={haConfigModalVisible}
+        onClose={() => setHaConfigModalVisible(false)}
+      />
     </KeyboardAvoidingView>
   );
 };

@@ -1,4 +1,7 @@
 import { BinarySensorData, ClimateData, LightData, SensorData } from '../../types';
+import { fetchWithTimeout } from '../utils/fetch';
+import { homeAssistantApiService } from './HomeAssistantApiService';
+import { homeAssistantConfigService } from './HomeAssistantConfigService';
 
 // WebSocket Configuration
 const WS_API_URL = `ws://192.168.100.95:3040/api/ws/entities_live`;
@@ -37,6 +40,76 @@ class HomeAssistantService {
   constructor() {
     this.initializeWithDummyData();
     // Console log all binary sensors to check camera sensors
+    this.logBinarySensors();
+  }
+
+  // Load initial states from Home Assistant API
+  async loadInitialStatesFromAPI(entityIds: string[]): Promise<void> {
+    try {
+      console.log('Loading initial states from Home Assistant API...');
+      
+      // Test connection first
+      const isConnected = await homeAssistantApiService.testConnection();
+      if (!isConnected) {
+        console.warn('Cannot connect to Home Assistant API, using dummy data');
+        return;
+      }
+
+      // Fetch actual states from API
+      const apiStates = await homeAssistantApiService.fetchConfiguredEntityStates(entityIds);
+      
+      // Merge API states with dummy data (API states take priority)
+      this.currentData = {
+        binarySensorData: { ...this.currentData.binarySensorData, ...apiStates.binarySensorData },
+        climateData: { ...this.currentData.climateData, ...apiStates.climateData },
+        lightData: { ...this.currentData.lightData, ...apiStates.lightData },
+        sensorData: { ...this.currentData.sensorData, ...apiStates.sensorData }
+      };
+
+      console.log('Successfully loaded initial states from API');
+      this.notifyListeners();
+      
+    } catch (error) {
+      console.warn('Failed to load initial states from API:', error);
+      // Continue with dummy data if API fails
+    }
+  }
+
+  // Extract entity IDs from configured devices for API loading
+  getConfiguredEntityIds(configuredDevices: any[]): string[] {
+    const entityIds: string[] = [];
+    
+    configuredDevices.forEach(device => {
+      if (device.entity && device.entity.trim() !== '') {
+        entityIds.push(device.entity);
+      }
+      
+      // For cameras, also add motion and occupancy sensor entities
+      if (device.type === 'camera') {
+        if (device.motion_sensor && device.motion_sensor.trim() !== '') {
+          entityIds.push(device.motion_sensor);
+        }
+        if (device.occupancy_sensor && device.occupancy_sensor.trim() !== '') {
+          entityIds.push(device.occupancy_sensor);
+        }
+      }
+    });
+    
+    // Remove duplicates
+    return [...new Set(entityIds)];
+  }
+
+  // Initialize with both dummy data and API data
+  async initializeWithConfiguredDevices(configuredDevices: any[]): Promise<void> {
+    // Always start with dummy data
+    this.initializeWithDummyData();
+    
+    // Try to load real data from API
+    const entityIds = this.getConfiguredEntityIds(configuredDevices);
+    if (entityIds.length > 0) {
+      await this.loadInitialStatesFromAPI(entityIds);
+    }
+    
     this.logBinarySensors();
   }
 
@@ -148,7 +221,7 @@ class HomeAssistantService {
         'binary_sensor.office_demo_person_occupancy': {
           entity_id: 'binary_sensor.office_demo_person_occupancy',
           old_state: 'off',
-          new_state: 'off',
+          new_state: 'off', 
           user_id: null,
           timestamp: '2025-10-25T16:01:02.946201+00:00',
           attributes: {
@@ -520,7 +593,7 @@ class HomeAssistantService {
     return this.websocket?.readyState === WebSocket.OPEN;
   }
 
-  // Simple toggle method for testing (can be enhanced later)
+  // Simple toggle method for testing (enhanced with API calls)
   toggleEntity(entityId: string): void {
     const currentData = this.getCurrentData();
     
@@ -558,10 +631,40 @@ class HomeAssistantService {
       
       console.log(`Toggling ${entityId} from ${entity.new_state} to ${newState}`);
       this.processEntityStates([updatedEntity]);
+      
+      // Also toggle via API (fire and forget)
+      if (entityId.startsWith('light.')) {
+        const action = newState === 'on' ? 'turn_on' : 'turn_off';
+        this.controlLight(entityId, action).catch(error => {
+          console.warn(`Failed to control light ${entityId}:`, error);
+        });
+      } else {
+        this.toggleEntityViaAPI(entityId, newState);
+      }
     }
   }
 
-  // Method to update AC settings (temperature, fan mode, etc.)
+  // Toggle entity via Home Assistant API
+  private async toggleEntityViaAPI(entityId: string, newState: string): Promise<void> {
+    try {
+      if (entityId.startsWith('light.')) {
+        const service = newState === 'on' ? 'turn_on' : 'turn_off';
+        console.log(`Calling HA API: light.${service} for ${entityId}`);
+        await this.callHomeAssistantService('light', service, { entity_id: entityId });
+      } else if (entityId.startsWith('climate.')) {
+        console.log(`Calling HA API: climate.set_hvac_mode for ${entityId} with mode ${newState}`);
+        await this.callHomeAssistantService('climate', 'set_hvac_mode', {
+          entity_id: entityId,
+          hvac_mode: newState
+        });
+      }
+      // Note: binary_sensor entities are typically read-only
+    } catch (error) {
+      console.warn(`Failed to toggle ${entityId} via API:`, error);
+    }
+  }
+
+  // Method to update AC settings (temperature, fan mode, etc.) - now uses API
   updateClimateEntity(entityId: string, updates: Partial<{ temperature: number; fan_mode: string; hvac_mode: string }>): void {
     const currentData = this.getCurrentData();
     const entity = currentData.climateData[entityId];
@@ -586,6 +689,140 @@ class HomeAssistantService {
       
       console.log(`Updating ${entityId}:`, updates);
       this.processEntityStates([updatedEntity]);
+      
+      // Also try to update via API (fire and forget)
+      this.updateEntityViaAPI(entityId, updates);
+    }
+  }
+
+  // Control light via Home Assistant API
+  async controlLight(entityId: string, action: 'turn_on' | 'turn_off', options?: {
+    brightness?: number;
+    rgb_color?: [number, number, number];
+    color_temp?: number;
+  }): Promise<void> {
+    try {
+      const serviceData: any = { entity_id: entityId };
+      
+      if (action === 'turn_on' && options) {
+        if (options.brightness !== undefined) {
+          serviceData.brightness = options.brightness;
+        }
+        if (options.rgb_color) {
+          serviceData.rgb_color = options.rgb_color;
+        }
+        if (options.color_temp) {
+          serviceData.color_temp = options.color_temp;
+        }
+      }
+
+      console.log(`Calling HA API: light.${action} for ${entityId}`, serviceData);
+      await this.callHomeAssistantService('light', action, serviceData);
+      
+      // Update local state immediately for UI responsiveness
+      const currentData = this.getCurrentData();
+      const lightEntity = currentData.lightData[entityId];
+      if (lightEntity) {
+        const updatedEntity = {
+          ...lightEntity,
+          old_state: lightEntity.new_state,
+          new_state: action === 'turn_on' ? 'on' : 'off',
+          timestamp: new Date().toISOString()
+        };
+        this.processEntityStates([updatedEntity]);
+      }
+    } catch (error) {
+      console.error(`Failed to control light ${entityId}:`, error);
+      throw error;
+    }
+  }
+
+  // Update entity via Home Assistant API
+  private async updateEntityViaAPI(entityId: string, updates: any): Promise<void> {
+    try {
+      // For climate entities, call the appropriate service
+      if (entityId.startsWith('climate.')) {
+        if (updates.temperature !== undefined) {
+          console.log(`Calling HA API: climate.set_temperature for ${entityId} to ${updates.temperature}°C`);
+          await this.callHomeAssistantService('climate', 'set_temperature', {
+            entity_id: entityId,
+            temperature: updates.temperature
+          });
+        }
+        if (updates.fan_mode !== undefined) {
+          console.log(`Calling HA API: climate.set_fan_mode for ${entityId} to ${updates.fan_mode}`);
+          await this.callHomeAssistantService('climate', 'set_fan_mode', {
+            entity_id: entityId,
+            fan_mode: updates.fan_mode
+          });
+        }
+        if (updates.hvac_mode !== undefined) {
+          console.log(`Calling HA API: climate.set_hvac_mode for ${entityId} to ${updates.hvac_mode}`);
+          await this.callHomeAssistantService('climate', 'set_hvac_mode', {
+            entity_id: entityId,
+            hvac_mode: updates.hvac_mode
+          });
+        }
+      }
+    } catch (error) {
+      console.warn(`Failed to update ${entityId} via API:`, error);
+    }
+  }
+
+  // Call Home Assistant service
+  private async callHomeAssistantService(domain: string, service: string, serviceData: any): Promise<void> {
+    try {
+      const config = await homeAssistantConfigService.getConfig();
+      const authHeader = await homeAssistantConfigService.getAuthHeader();
+      
+      // Use the updated getApiUrl method that handles proxy/direct URL logic
+      const apiUrl = await homeAssistantConfigService.getApiUrl();
+      const serviceUrl = `${apiUrl}/services/${domain}/${service}`;
+      
+      console.log(`🔧 Calling service: ${serviceUrl}`);
+      
+      const response = await fetchWithTimeout(serviceUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(serviceData),
+        timeout: 10000, // 10 second timeout
+      });
+
+      if (!response.ok) {
+        throw new Error(`Service call failed: ${response.status} ${response.statusText}`);
+      }
+
+      console.log(`✅ Successfully called ${domain}.${service} for`, serviceData.entity_id);
+    } catch (error) {
+      console.error(`❌ Failed to call ${domain}.${service}:`, error);
+      throw error;
+    }
+  }
+
+  // Refresh specific entity data from API
+  async refreshEntityFromAPI(entityId: string): Promise<void> {
+    try {
+      if (entityId.startsWith('climate.')) {
+        const climateData = await homeAssistantApiService.fetchClimateState(entityId);
+        if (climateData) {
+          this.processEntityStates([climateData]);
+        }
+      } else if (entityId.startsWith('light.')) {
+        const lightData = await homeAssistantApiService.fetchLightState(entityId);
+        if (lightData) {
+          this.processEntityStates([lightData]);
+        }
+      } else if (entityId.startsWith('binary_sensor.')) {
+        const binaryData = await homeAssistantApiService.fetchBinarySensorState(entityId);
+        if (binaryData) {
+          this.processEntityStates([binaryData]);
+        }
+      }
+    } catch (error) {
+      console.warn(`Failed to refresh entity ${entityId} from API:`, error);
     }
   }
 
@@ -607,6 +844,38 @@ class HomeAssistantService {
     
     // Clear interval after 30 seconds for demo
     setTimeout(() => clearInterval(intervalId), 30000);
+  }
+
+  // Method to test light controls (for demonstration)
+  async testLightControls(): Promise<void> {
+    const lights = ['light.boarda_buttonswitch_a', 'light.living_room', 'light.office_light_grill43'];
+    
+    console.log('🔆 Testing light controls with Home Assistant API...');
+    
+    for (const lightId of lights) {
+      try {
+        console.log(`Testing ${lightId}:`);
+        
+        // Turn on
+        await this.controlLight(lightId, 'turn_on');
+        console.log(`✅ ${lightId} turned on`);
+        
+        // Wait a moment
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Turn off
+        await this.controlLight(lightId, 'turn_off');
+        console.log(`✅ ${lightId} turned off`);
+        
+        // Wait before next light
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+      } catch (error) {
+        console.error(`❌ Failed to control ${lightId}:`, error);
+      }
+    }
+    
+    console.log('🔆 Light control test completed');
   }
 }
 

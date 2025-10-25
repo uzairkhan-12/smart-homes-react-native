@@ -138,8 +138,18 @@ const DashboardScreen: React.FC = () => {
   const loadConfiguredDevices = async () => {
     try {
       setLoading(true);
-      const devices = await deviceStorageService.getConfiguredDevices();
+      
+      // Ensure radar sensors count is correct (migration helper)
+      await deviceStorageService.ensureRadarSensorsCount();
+      
+      // Use getAllDevices to show all devices, including those without entities
+      const devices = await deviceStorageService.getAllDevices();
       setConfiguredDevices(devices);
+      
+      // Initialize HomeAssistant service with only configured devices (those with entities) for API loading
+      const configuredOnly = await deviceStorageService.getConfiguredDevices();
+      await homeAssistantService.initializeWithConfiguredDevices(configuredOnly);
+      
     } catch (error) {
       Alert.alert('Error', 'Failed to load configured devices');
     } finally {
@@ -208,6 +218,11 @@ const DashboardScreen: React.FC = () => {
   };
 
   const getBinarySensorState = (device: SensorDevice): { isActive: boolean; stateText: string } => {
+    // If device has no entity configured, show "Not Configured"
+    if (!device.entity || device.entity.trim() === '') {
+      return { isActive: false, stateText: 'Not Configured' };
+    }
+
     const deviceData = getDeviceData(device);
     
     // Check if we have binary sensor data
@@ -313,6 +328,7 @@ const DashboardScreen: React.FC = () => {
       <DashboardHeader
         avgTemperature={avgTemperature}
         avgHumidity={avgHumidity}
+        onTempHumidityDetailsPress={() => setTempHumidityModalVisible(true)}
       />
 
       {configuredDevices.length === 0 ? (
@@ -391,40 +407,7 @@ const DashboardScreen: React.FC = () => {
             );
           })()}
 
-          {/* Binary Sensors */}
-          {['water', 'radar', 'door', 'security'].map(sensorType => {
-            const devices = configuredDevices.filter(device => device.type === sensorType);
-            if (devices.length === 0) return null;
-            const { title, icon } = getSectionConfig(sensorType);
-            
-            // Show 4 water sensors in one row, others show 2 per row
-            const itemsPerRow = sensorType === 'water' ? 4 : 2;
-
-            return (
-              <DeviceSection
-                key={sensorType}
-                title={title}
-                devices={devices}
-                icon={icon}
-                itemsPerRow={itemsPerRow}
-              >
-                {devices.map(device => {
-                  const { isActive, stateText } = getBinarySensorState(device);
-                  return (
-                    <BinarySensorCard
-                      key={device.id}
-                      device={device}
-                      isActive={isActive}
-                      stateText={stateText}
-                      cardWidth={getCardWidth(itemsPerRow)}
-                    />
-                  );
-                })}
-              </DeviceSection>
-            );
-          })}
-
-          {/* Cameras */}
+           {/* Cameras */}
           {(() => {
             const devices = configuredDevices.filter(device => device.type === 'camera');
             if (devices.length === 0) return null;
@@ -480,8 +463,11 @@ const DashboardScreen: React.FC = () => {
                   // Create enhanced camera object with sensor data
                   const cameraWithSensors = {
                     ...camera,
-                    motion_sensor: motionSensor ? { detected: motionSensor.new_state === 'on' } : { detected: false },
-                    occupancy_sensor: occupancySensor ? { detected: occupancySensor.new_state === 'on' } : { detected: false }
+                    motion_sensor_detected: motionSensor ? motionSensor.new_state === 'on' : false,
+                    occupancy_sensor_detected: occupancySensor ? occupancySensor.new_state === 'on' : false,
+                    // Keep original entity IDs for reference
+                    motion_sensor_entity: camera.motion_sensor,
+                    occupancy_sensor_entity: camera.occupancy_sensor
                   };
                   
                   return (
@@ -495,6 +481,41 @@ const DashboardScreen: React.FC = () => {
               </DeviceSection>
             );
           })()}
+
+          {/* Binary Sensors */}
+          {['water', 'radar', 'door', 'security'].map(sensorType => {
+            const devices = configuredDevices.filter(device => device.type === sensorType);
+            if (devices.length === 0) return null;
+            const { title, icon } = getSectionConfig(sensorType);
+            
+            // Show 4 water sensors and 4 radar sensors in one row, others show 2 per row
+            const itemsPerRow = (sensorType === 'water' || sensorType === 'radar') ? 4 : 2;
+
+            return (
+              <DeviceSection
+                key={sensorType}
+                title={title}
+                devices={devices}
+                icon={icon}
+                itemsPerRow={itemsPerRow}
+              >
+                {devices.map(device => {
+                  const { isActive, stateText } = getBinarySensorState(device);
+                  return (
+                    <BinarySensorCard
+                      key={device.id}
+                      device={device}
+                      isActive={isActive}
+                      stateText={stateText}
+                      cardWidth={getCardWidth(itemsPerRow)}
+                    />
+                  );
+                })}
+              </DeviceSection>
+            );
+          })}
+
+         
 
           {/* Other Sensors */}
           {(() => {

@@ -12,8 +12,8 @@ interface CameraCardProps {
 const CameraCard: React.FC<CameraCardProps> = ({ camera, cardWidth }: any) => {
   const { isDark: isDarkTheme } = useTheme();
 
-  const hasMotionSensor = camera.motion_sensor?.detected;
-  const hasOccupancySensor = camera.occupancy_sensor?.detected;
+  const hasMotionSensor = camera.motion_sensor_detected;
+  const hasOccupancySensor = camera.occupancy_sensor_detected;
   console.log({hasMotionSensor, hasOccupancySensor});
   return (
     <View style={[styles.card, { width: cardWidth }]}>

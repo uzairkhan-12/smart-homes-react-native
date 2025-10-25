@@ -8,75 +8,89 @@ class DeviceStorageService {
   // Initialize default devices structure
   private getDefaultDevices(): StoredDevices {
     return {
-      waterSensors: Array.from({ length: 8 }, (_, i) => ({
+      waterSensors: Array.from({ length: 3 }, (_, i) => ({
         id: `water_${i + 1}`,
         name: `Water Sensor ${i + 1}`,
         entity: '',
-        type: 'water' as const
+        type: 'water'
       })),
       radarSensors: Array.from({ length: 4 }, (_, i) => ({
         id: `radar_${i + 1}`,
         name: `Radar Sensor ${i + 1}`,
         entity: '',
-        type: 'radar' as const
+        type: 'radar'
       })),
       tempHumiditySensors: Array.from({ length: 2 }, (_, i) => ({
         id: `temp_humidity_${i + 1}`,
         name: `Temperature & Humidity Sensor ${i + 1}`,
         entity: '',
-        type: 'temp_humidity' as const
+        type: 'temp_humidity'
       })),
       doorSensor: {
         id: 'door_1',
-        name: 'Door Sensor',
+        name: 'Front Door',
         entity: '',
-        type: 'door' as const
+        type: 'door'
       },
-      lights: Array.from({ length: 2 }, (_, i) => ({
-        id: `light_${i + 1}`,
-        name: `Light ${i + 1}`,
-        entity: '',
-        type: 'light' as const
-      })),
+      lights: [
+        {
+          id: 'light_1',
+          name: 'Board A Button Switch A',
+          entity: 'light.boarda_buttonswitch_a',
+          type: 'light'
+        },
+        {
+          id: 'light_2',
+          name: 'Living Room Light',
+          entity: 'light.living_room',
+          type: 'light'
+        },
+        {
+          id: 'light_3',
+          name: 'Office Light',
+          entity: 'light.office_light_grill43',
+          type: 'light'
+        }
+      ],
       cameras: [
         {
           id: 'camera_1',
           name: 'Front Door Camera',
           entity: 'camera.front_door',
-          type: 'camera' as const,
+          type: 'camera',
           stream_url: 'http://192.168.100.95:8123/api/camera_proxy_stream/camera.front_door',
           motion_sensor: 'binary_sensor.radar_sensor_1',
           occupancy_sensor: 'binary_sensor.frontdoor_1_person_occupancy'
-        },
+        } as SensorDevice,
         {
           id: 'camera_2',
-          name: 'Camera 2',
-          entity: 'camera.living_room',
-          type: 'camera' as const,
+          name: 'Office Camera',
+          entity: 'camera.office_demo',
+          type: 'camera',
           stream_url: 'http://192.168.100.55:5050/api/office_demo',
           motion_sensor: 'binary_sensor.office_demo_motion',
           occupancy_sensor: 'binary_sensor.office_demo_person_occupancy'
-        }
+        } as SensorDevice
       ],
       acs: [
         {
           id: 'ac_1',
           name: 'Office AC',
           entity: 'climate.office_ac',
-          type: 'ac' as const
+          type: 'ac'
         },
         {
           id: 'ac_2',
           name: 'Living Room AC',
           entity: 'climate.living_room_ac',
-          type: 'ac' as const
+          type: 'ac'
         }
       ],
       security: {
         id: 'security_1',
         name: 'Security System',
         entity: '',
-        type: 'security' as const
+        type: 'security'
       }
     };
   }
@@ -165,6 +179,36 @@ class DeviceStorageService {
     }
   }
 
+  // Get all devices from storage (including those without entities configured)
+  async getAllDevices(): Promise<SensorDevice[]> {
+    try {
+      const devices = await this.loadDevices();
+      console.log('Loaded all devices from storage:', devices);
+      const allDevices: SensorDevice[] = [];
+
+      // Add all array devices regardless of entity configuration
+      allDevices.push(...devices.waterSensors);
+      allDevices.push(...devices.radarSensors);
+      allDevices.push(...devices.tempHumiditySensors);
+      allDevices.push(...devices.lights);
+      allDevices.push(...devices.cameras);
+      allDevices.push(...devices.acs);
+
+      // Add single devices
+      if (devices.doorSensor) {
+        allDevices.push(devices.doorSensor);
+      }
+      if (devices.security) {
+        allDevices.push(devices.security);
+      }
+
+      return allDevices;
+    } catch (error) {
+      console.error('Error getting all devices:', error);
+      return [];
+    }
+  }
+
   // Theme preference methods
   async saveThemePreference(theme: 'light' | 'dark'): Promise<void> {
     try {
@@ -201,6 +245,56 @@ class DeviceStorageService {
       await AsyncStorage.removeItem(STORAGE_KEY);
     } catch (error) {
       console.error('Error clearing devices:', error);
+      throw error;
+    }
+  }
+
+  // Reset devices to default (useful when schema changes)
+  async resetToDefaultDevices(): Promise<void> {
+    try {
+      const defaultDevices = this.getDefaultDevices();
+      await this.saveDevices(defaultDevices);
+    } catch (error) {
+      console.error('Error resetting to default devices:', error);
+      throw error;
+    }
+  }
+
+  // Ensure radar sensors array has 4 items (migration helper)
+  async ensureRadarSensorsCount(): Promise<void> {
+    try {
+      const devices = await this.loadDevices();
+      
+      // Check if radar sensors array has less than 4 items
+      if (devices.radarSensors.length < 4) {
+        console.log(`Found ${devices.radarSensors.length} radar sensors, updating to 4`);
+        
+        // Create new radar sensors array with 4 items
+        const updatedRadarSensors = Array.from({ length: 4 }, (_, i) => {
+          // Keep existing radar sensors if they exist
+          if (i < devices.radarSensors.length) {
+            return devices.radarSensors[i];
+          }
+          // Create new radar sensor for missing items
+          return {
+            id: `radar_${i + 1}`,
+            name: `Radar Sensor ${i + 1}`,
+            entity: '',
+            type: 'radar' as const
+          } as SensorDevice;
+        });
+        
+        // Update devices with new radar sensors array
+        const updatedDevices = {
+          ...devices,
+          radarSensors: updatedRadarSensors
+        };
+        
+        await this.saveDevices(updatedDevices);
+        console.log('Successfully updated radar sensors to 4 items');
+      }
+    } catch (error) {
+      console.error('Error ensuring radar sensors count:', error);
       throw error;
     }
   }
