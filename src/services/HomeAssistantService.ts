@@ -215,6 +215,31 @@ class HomeAssistantService {
             friendly_name: 'Office AC',
             supported_features: 393
           }
+        },
+        'climate.living_room_ac': {
+          entity_id: 'climate.living_room_ac',
+          old_state: 'cool',
+          new_state: 'cool',
+          user_id: '45882e54e84d4c308af1caabae6b3876',
+          timestamp: '2025-10-25T15:59:57.597483+00:00',
+          attributes: {
+            hvac_modes: ['off', 'heat', 'cool', 'heat_cool', 'fan_only'],
+            min_temp: 16.0,
+            max_temp: 32.0,
+            target_temp_step: 1.0,
+            fan_modes: ['low', 'mid', 'high', 'auto'],
+            current_temperature: 24,
+            temperature: 20,
+            fan_mode: 'mid',
+            last_on_operation: 'cool',
+            device_code: 1420,
+            manufacturer: 'LG',
+            supported_models: ['Unknown'],
+            supported_controller: 'Broadlink',
+            commands_encoding: 'Base64',
+            friendly_name: 'Living Room AC',
+            supported_features: 393
+          }
         }
       },
       lightData: {
@@ -505,11 +530,25 @@ class HomeAssistantService {
       entity = currentData.lightData[entityId];
     } else if (entityId.startsWith('binary_sensor.')) {
       entity = currentData.binarySensorData[entityId];
+    } else if (entityId.startsWith('climate.')) {
+      entity = currentData.climateData[entityId];
     }
     
     if (entity) {
       // Toggle the state
-      const newState = entity.new_state === 'on' ? 'off' : 'on';
+      let newState: string;
+      if (entityId.startsWith('climate.')) {
+        // For climate entities, cycle through modes
+        const currentMode = entity.new_state;
+        const climateEntity = entity as ClimateData;
+        const modes = (climateEntity.attributes as any)?.hvac_modes || ['off', 'heat', 'cool', 'heat_cool'];
+        const currentIndex = modes.indexOf(currentMode);
+        const nextIndex = (currentIndex + 1) % modes.length;
+        newState = modes[nextIndex];
+      } else {
+        newState = entity.new_state === 'on' ? 'off' : 'on';
+      }
+      
       const updatedEntity = {
         ...entity,
         old_state: entity.new_state,
@@ -520,6 +559,54 @@ class HomeAssistantService {
       console.log(`Toggling ${entityId} from ${entity.new_state} to ${newState}`);
       this.processEntityStates([updatedEntity]);
     }
+  }
+
+  // Method to update AC settings (temperature, fan mode, etc.)
+  updateClimateEntity(entityId: string, updates: Partial<{ temperature: number; fan_mode: string; hvac_mode: string }>): void {
+    const currentData = this.getCurrentData();
+    const entity = currentData.climateData[entityId];
+    
+    if (entity) {
+      const updatedAttributes = { ...entity.attributes } as any;
+      
+      if (updates.temperature !== undefined) {
+        updatedAttributes.temperature = updates.temperature;
+      }
+      if (updates.fan_mode !== undefined) {
+        updatedAttributes.fan_mode = updates.fan_mode;
+      }
+      
+      const updatedEntity = {
+        ...entity,
+        old_state: entity.new_state,
+        new_state: updates.hvac_mode || entity.new_state,
+        timestamp: new Date().toISOString(),
+        attributes: updatedAttributes
+      };
+      
+      console.log(`Updating ${entityId}:`, updates);
+      this.processEntityStates([updatedEntity]);
+    }
+  }
+
+  // Method to simulate AC changes for testing
+  simulateACChanges(): void {
+    const acs = ['climate.office_ac', 'climate.living_room_ac'];
+    
+    const intervalId = setInterval(() => {
+      const randomAC = acs[Math.floor(Math.random() * acs.length)];
+      const changes = [
+        { temperature: Math.floor(Math.random() * 10) + 18 }, // 18-27°C
+        { fan_mode: ['low', 'mid', 'high'][Math.floor(Math.random() * 3)] },
+        { hvac_mode: ['off', 'heat', 'cool', 'heat_cool'][Math.floor(Math.random() * 4)] }
+      ];
+      
+      const randomChange = changes[Math.floor(Math.random() * changes.length)];
+      this.updateClimateEntity(randomAC, randomChange);
+    }, 3000); // Change every 3 seconds for demo
+    
+    // Clear interval after 30 seconds for demo
+    setTimeout(() => clearInterval(intervalId), 30000);
   }
 }
 

@@ -58,12 +58,20 @@ class DeviceStorageService {
           occupancy_sensor: 'binary_sensor.office_demo_person_occupancy'
         }
       ],
-      acs: Array.from({ length: 2 }, (_, i) => ({
-        id: `ac_${i + 1}`,
-        name: `Air Conditioner ${i + 1}`,
-        entity: '',
-        type: 'ac' as const
-      })),
+      acs: [
+        {
+          id: 'ac_1',
+          name: 'Office AC',
+          entity: 'climate.office_ac',
+          type: 'ac' as const
+        },
+        {
+          id: 'ac_2',
+          name: 'Living Room AC',
+          entity: 'climate.living_room_ac',
+          type: 'ac' as const
+        }
+      ],
       security: {
         id: 'security_1',
         name: 'Security System',
