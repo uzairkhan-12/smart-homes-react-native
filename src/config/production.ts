@@ -1,8 +1,7 @@
 // Production configuration for standalone apps
-// This configuration bypasses CORS by using direct Home Assistant access
-// Note: Only works if Home Assistant allows direct access
+// This configuration uses the FastAPI backend for all operations
 
-import { HA_API_URL, HA_TOKEN } from './api';
+import { BACKEND_CONFIG, HA_DIRECT_CONFIG } from './api';
 
 // Environment detection
 const isStandalone = typeof navigator !== 'undefined' && (navigator as any).standalone;
@@ -10,34 +9,26 @@ const isExpoGo = typeof window !== 'undefined' && window.location.href.includes(
 
 // Production API configuration
 export const PRODUCTION_CONFIG = {
-  // Direct Home Assistant access (no proxy needed)
-  HA_DIRECT_URL: "http://192.168.100.60:8123/api",
-  HA_TOKEN: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIwZGIwM2M1Y2Y2ZWI0MGFmYjNhMTUxNmU0Mzk4ZGQxOSIsImlhdCI6MTc1NzgwNDAxMiwiZXhwIjoyMDczMTY0MDEyfQ.bhrLV6mhfbVnhr7cuwyncUq1R_0SYT6RDWlHPRveZ1A",
+  // FastAPI Backend (preferred for all operations)
+  BACKEND_URL: BACKEND_CONFIG.BASE_URL,
   
-  // Alternative: Use a remote proxy server
-  REMOTE_PROXY_URL: "https://your-server.com/ha-api", // If you deploy proxy to cloud
+  // Direct Home Assistant access (fallback only)
+  HA_DIRECT_URL: HA_DIRECT_CONFIG.API_URL,
+  HA_TOKEN: HA_DIRECT_CONFIG.TOKEN,
   
-  // Fallback configuration
-  USE_DIRECT_ACCESS: true, // Set to false if you want to use remote proxy
+  // For remote deployment: Update BACKEND_URL to your deployed backend
+  // BACKEND_URL: "https://your-backend.herokuapp.com",
+  
+  USE_BACKEND: true, // Always use backend (no proxy needed)
 };
 
 // Auto-detect environment and use appropriate config
 export const getApiConfig = () => {
-  // For standalone apps (APK/IPA), use direct access or remote proxy
-  if (isStandalone || !isExpoGo) {
-    return {
-      baseUrl: PRODUCTION_CONFIG.USE_DIRECT_ACCESS 
-        ? PRODUCTION_CONFIG.HA_DIRECT_URL 
-        : PRODUCTION_CONFIG.REMOTE_PROXY_URL,
-      useProxy: !PRODUCTION_CONFIG.USE_DIRECT_ACCESS,
-      token: PRODUCTION_CONFIG.HA_TOKEN
-    };
-  }
-  
-  // For development (Expo Go), use local proxy
+  // Always use backend for both development and production
   return {
-    baseUrl: HA_API_URL,
-    useProxy: true,
-    token: HA_TOKEN
+    backendUrl: PRODUCTION_CONFIG.BACKEND_URL,
+    fallbackUrl: PRODUCTION_CONFIG.HA_DIRECT_URL,
+    token: PRODUCTION_CONFIG.HA_TOKEN,
+    useBackend: PRODUCTION_CONFIG.USE_BACKEND
   };
 };

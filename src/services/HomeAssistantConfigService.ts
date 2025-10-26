@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { HA_API_URL, HA_TOKEN } from '../config/api';
+import { HA_DIRECT_CONFIG } from '../config/api';
 import { fetchWithTimeout } from '../utils/fetch';
 
 export interface HomeAssistantConfig {
@@ -13,12 +13,12 @@ class HomeAssistantConfigService {
   private static instance: HomeAssistantConfigService;
   private static readonly CONFIG_KEY = 'home_assistant_config';
   
-  // Default configuration - using CORS proxy
+  // Default configuration - using direct Home Assistant API (no proxy)
   private defaultConfig: HomeAssistantConfig = {
-    baseUrl: HA_API_URL, // Use proxy by default
-    token: HA_TOKEN, // Use token from config
+    baseUrl: HA_DIRECT_CONFIG.API_URL, // Direct HA API
+    token: HA_DIRECT_CONFIG.TOKEN, // Use token from config
     websocketUrl: 'ws://192.168.100.95:3040/api/ws/entities_live',
-    useProxy: true
+    useProxy: false // No proxy needed with backend
   };
 
   private constructor() {}
@@ -80,8 +80,8 @@ class HomeAssistantConfigService {
   async getApiUrl(): Promise<string> {
     const config = await this.getConfig();
     // If using proxy, return the base URL as it already includes the /ha-api path
-    // Otherwise, append /api to the base URL
-    return config.useProxy ? config.baseUrl : `${config.baseUrl}/api`;
+    // Otherwise, return the base URL directly (it should already include /api)
+    return config.baseUrl;
   }
 
   // Get WebSocket URL

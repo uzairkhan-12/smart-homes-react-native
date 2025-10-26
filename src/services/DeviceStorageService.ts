@@ -59,7 +59,7 @@ class DeviceStorageService {
           entity: 'camera.front_door',
           type: 'camera',
           stream_url: 'http://192.168.100.95:8123/api/camera_proxy_stream/camera.front_door',
-          motion_sensor: 'binary_sensor.radar_sensor_1',
+          motion_sensor: 'binary_sensor.frontdoor_1_motion',
           occupancy_sensor: 'binary_sensor.frontdoor_1_person_occupancy'
         } as SensorDevice,
         {
@@ -149,20 +149,26 @@ class DeviceStorageService {
     }
   }
 
-  // Get all configured devices (with entities)
+  // Get all configured devices (with entities or additional sensors)
   async getConfiguredDevices(): Promise<SensorDevice[]> {
     try {
       const devices = await this.loadDevices();
       console.log('Loaded devices from storage:', devices);
       const allDevices: SensorDevice[] = [];
 
-      // Add array devices
+      // Add array devices that have main entities configured
       allDevices.push(...devices.waterSensors.filter(d => d.entity.trim() !== ''));
       allDevices.push(...devices.radarSensors.filter(d => d.entity.trim() !== ''));
       allDevices.push(...devices.tempHumiditySensors.filter(d => d.entity.trim() !== ''));
       allDevices.push(...devices.lights.filter(d => d.entity.trim() !== ''));
-      allDevices.push(...devices.cameras.filter(d => d.entity.trim() !== ''));
       allDevices.push(...devices.acs.filter(d => d.entity.trim() !== ''));
+
+      // For cameras, include if main entity OR motion/occupancy sensors are configured
+      allDevices.push(...devices.cameras.filter(d => 
+        d.entity.trim() !== '' || 
+        (d as any).motion_sensor?.trim() !== '' || 
+        (d as any).occupancy_sensor?.trim() !== ''
+      ));
 
       // Add single devices if configured
       if (devices.doorSensor && devices.doorSensor.entity.trim() !== '') {
@@ -171,6 +177,17 @@ class DeviceStorageService {
       if (devices.security && devices.security.entity.trim() !== '') {
         allDevices.push(devices.security);
       }
+
+      console.log('📱 Configured devices found:', allDevices.length);
+      allDevices.forEach(device => {
+        console.log(`  - ${device.name} (${device.type}): ${device.entity}`);
+        if ((device as any).motion_sensor) {
+          console.log(`    🎥 Motion sensor: ${(device as any).motion_sensor}`);
+        }
+        if ((device as any).occupancy_sensor) {
+          console.log(`    🎥 Occupancy sensor: ${(device as any).occupancy_sensor}`);
+        }
+      });
 
       return allDevices;
     } catch (error) {
@@ -254,8 +271,32 @@ class DeviceStorageService {
     try {
       const defaultDevices = this.getDefaultDevices();
       await this.saveDevices(defaultDevices);
+      console.log('✅ Device storage reset to corrected defaults');
     } catch (error) {
       console.error('Error resetting to default devices:', error);
+      throw error;
+    }
+  }
+
+  // Force update to corrected camera configuration (one-time fix)
+  async updateCameraConfiguration(): Promise<void> {
+    try {
+      const devices = await this.loadDevices();
+      
+      // Find and update Front Door Camera configuration
+      const frontDoorCamera = devices.cameras.find(camera => camera.id === 'camera_1');
+      if (frontDoorCamera) {
+        // Update to correct motion sensor entity ID
+        (frontDoorCamera as any).motion_sensor = 'binary_sensor.frontdoor_1_motion';
+        
+        console.log('✅ Updated Front Door Camera motion sensor to: binary_sensor.frontdoor_1_motion');
+        await this.saveDevices(devices);
+        console.log('✅ Camera configuration saved');
+      } else {
+        console.log('❌ Front Door Camera not found in storage');
+      }
+    } catch (error) {
+      console.error('Error updating camera configuration:', error);
       throw error;
     }
   }

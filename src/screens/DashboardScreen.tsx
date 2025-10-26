@@ -16,6 +16,7 @@ import {
 import { BinarySensorData, ClimateData, LightData, SensorData, SensorDevice } from '../../types';
 import { deviceStorageService } from '../services/DeviceStorageService';
 import { HomeAssistantData, homeAssistantService } from '../services/HomeAssistantService';
+import { ensureCorrectCameraConfig } from '../utils/configurationFixer';
 
 // Import components
 
@@ -48,6 +49,21 @@ const DashboardScreen: React.FC = () => {
   useEffect(() => {
     // Subscribe to data updates
     const unsubscribe = homeAssistantService.subscribe((data: HomeAssistantData) => {
+      console.log('📡 Received data update from HomeAssistant service:', {
+        binarySensors: Object.keys(data.binarySensorData).length,
+        climate: Object.keys(data.climateData).length,
+        lights: Object.keys(data.lightData).length,
+        sensors: Object.keys(data.sensorData).length
+      });
+      
+      // Log binary sensor details
+      if (Object.keys(data.binarySensorData).length > 0) {
+        console.log('📡 Binary sensors received:', Object.keys(data.binarySensorData));
+        Object.entries(data.binarySensorData).forEach(([id, sensorData]) => {
+          console.log(`  - ${id}: ${sensorData.new_state}`);
+        });
+      }
+      
       setHaData(data);
       
       // Update connection status
@@ -138,19 +154,31 @@ const DashboardScreen: React.FC = () => {
   const loadConfiguredDevices = async () => {
     try {
       setLoading(true);
+      console.log('🔄 Starting loadConfiguredDevices...');
+      
+      // Fix camera configuration if needed (one-time fix)
+      const wasFixed = await ensureCorrectCameraConfig();
+      if (wasFixed) {
+        console.log('✅ Camera configuration was fixed');
+      }
       
       // Ensure radar sensors count is correct (migration helper)
       await deviceStorageService.ensureRadarSensorsCount();
       
       // Use getAllDevices to show all devices, including those without entities
       const devices = await deviceStorageService.getAllDevices();
+      console.log('📱 Loaded devices from storage:', devices.length);
       setConfiguredDevices(devices);
       
       // Initialize HomeAssistant service with only configured devices (those with entities) for API loading
       const configuredOnly = await deviceStorageService.getConfiguredDevices();
+      console.log('🔗 Configured devices for HA service:', configuredOnly.length);
+      
       await homeAssistantService.initializeWithConfiguredDevices(configuredOnly);
+      console.log('✅ HomeAssistant service initialized');
       
     } catch (error) {
+      console.error('❌ Error in loadConfiguredDevices:', error);
       Alert.alert('Error', 'Failed to load configured devices');
     } finally {
       setLoading(false);

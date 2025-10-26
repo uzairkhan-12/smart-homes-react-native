@@ -63,6 +63,8 @@ export class HomeAssistantApiService {
 
   // Fetch multiple entities in parallel
   private async fetchMultipleEntityStates(entityIds: string[]): Promise<{ [entityId: string]: HAApiEntityState }> {
+    console.log(`🔍 Fetching states for ${entityIds.length} entities:`, entityIds);
+    
     const promises = entityIds.map(async (entityId) => {
       const state = await this.fetchEntityState(entityId);
       return { entityId, state };
@@ -70,13 +72,22 @@ export class HomeAssistantApiService {
 
     const results = await Promise.all(promises);
     const statesMap: { [entityId: string]: HAApiEntityState } = {};
+    
+    let successCount = 0;
+    let failureCount = 0;
 
     results.forEach(({ entityId, state }) => {
       if (state) {
         statesMap[entityId] = state;
+        successCount++;
+        console.log(`✅ Successfully fetched: ${entityId}`);
+      } else {
+        failureCount++;
+        console.log(`❌ Failed to fetch: ${entityId}`);
       }
     });
 
+    console.log(`📊 Fetch results: ${successCount} successful, ${failureCount} failed`);
     return statesMap;
   }
 
