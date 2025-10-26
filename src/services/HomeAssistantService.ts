@@ -39,24 +39,17 @@ class HomeAssistantService {
 
   constructor() {
     this.initializeWithDummyData();
-    // Console log all binary sensors to check camera sensors
-    this.logBinarySensors();
   }
 
   // Load initial states from Home Assistant API
   async loadInitialStatesFromAPI(entityIds: string[]): Promise<void> {
     try {
-      console.log('� Loading initial states from backend API for entities:', entityIds);
+
       
       // Fetch actual states from API
       const apiStates = await homeAssistantApiService.fetchConfiguredEntityStates(entityIds);
       
-      console.log('✅ API states received:', {
-        binarySensors: Object.keys(apiStates.binarySensorData).length,
-        climate: Object.keys(apiStates.climateData).length,
-        lights: Object.keys(apiStates.lightData).length,
-        sensors: Object.keys(apiStates.sensorData).length
-      });
+
       
       // Set API states directly (no dummy data merging)
       this.currentData = {
@@ -66,7 +59,7 @@ class HomeAssistantService {
         sensorData: { ...apiStates.sensorData }
       };
 
-      console.log('✅ Successfully loaded initial states from API');
+
       this.notifyListeners();
       
     } catch (error) {
@@ -79,54 +72,28 @@ class HomeAssistantService {
   getConfiguredEntityIds(configuredDevices: any[]): string[] {
     const entityIds: string[] = [];
     
-    console.log('🔍 Extracting entity IDs from configured devices...');
+
     
     configuredDevices.forEach(device => {
-      console.log(`Processing device: ${device.name} (${device.type})`);
       
       // Add main entity if it exists
       if (device.entity && device.entity.trim() !== '') {
         entityIds.push(device.entity);
-        console.log(`  ✅ Main entity: ${device.entity}`);
       }
       
       // For cameras, also add motion and occupancy sensor entities
       if (device.type === 'camera') {
         if (device.motion_sensor && device.motion_sensor.trim() !== '') {
           entityIds.push(device.motion_sensor);
-          console.log(`  🎥 Motion sensor: ${device.motion_sensor}`);
         }
         if (device.occupancy_sensor && device.occupancy_sensor.trim() !== '') {
           entityIds.push(device.occupancy_sensor);
-          console.log(`  🎥 Occupancy sensor: ${device.occupancy_sensor}`);
-        }
-      }
-      
-      // For water sensors, radar sensors, door sensors, security sensors
-      // their main entity might be a binary sensor
-      if (['water', 'radar', 'door', 'security'].includes(device.type)) {
-        if (device.entity && device.entity.startsWith('binary_sensor.')) {
-          console.log(`  📡 Binary sensor entity: ${device.entity}`);
         }
       }
     });
     
     // Remove duplicates
     const uniqueEntityIds = [...new Set(entityIds)];
-    
-    // Log the breakdown
-    const binarySensors = uniqueEntityIds.filter(id => id.startsWith('binary_sensor.'));
-    const climateDevices = uniqueEntityIds.filter(id => id.startsWith('climate.'));
-    const lights = uniqueEntityIds.filter(id => id.startsWith('light.'));
-    const sensors = uniqueEntityIds.filter(id => id.startsWith('sensor.'));
-    const cameras = uniqueEntityIds.filter(id => id.startsWith('camera.'));
-    
-    console.log('📊 Entity breakdown:');
-    console.log(`  Binary sensors (${binarySensors.length}):`, binarySensors);
-    console.log(`  Climate devices (${climateDevices.length}):`, climateDevices);
-    console.log(`  Lights (${lights.length}):`, lights);
-    console.log(`  Sensors (${sensors.length}):`, sensors);
-    console.log(`  Cameras (${cameras.length}):`, cameras);
     
     return uniqueEntityIds;
   }
@@ -141,8 +108,6 @@ class HomeAssistantService {
     if (entityIds.length > 0) {
       await this.loadInitialStatesFromAPI(entityIds);
     }
-    
-    this.logBinarySensors();
   }
 
   // Initialize with dummy data for testing
@@ -445,32 +410,7 @@ class HomeAssistantService {
     };
   }
 
-  // Log binary sensors for debugging - especially camera sensors
-  private logBinarySensors() {
-    console.log('=== All Binary Sensors in Storage ===');
-    const binarySensors = Object.keys(this.currentData.binarySensorData);
-    
-    console.log(`Total binary sensors: ${binarySensors.length}`);
-    
-    // Filter camera sensors
-    const cameraSensors = binarySensors.filter(sensor => 
-      sensor.includes('camera') || sensor.includes('motion') || sensor.includes('occupancy')
-    );
-    
-    console.log(`Camera-related sensors: ${cameraSensors.length}`);
-    cameraSensors.forEach(sensor => {
-      const sensorData = this.currentData.binarySensorData[sensor];
-      console.log(`🎥 ${sensor}: ${sensorData.new_state} (${sensorData.attributes.friendly_name})`);
-    });
-    
-    // Log all binary sensors for reference
-    console.log('All binary sensors:');
-    binarySensors.forEach(sensor => {
-      const sensorData = this.currentData.binarySensorData[sensor];
-      console.log(`📡 ${sensor}: ${sensorData.new_state}`);
-    });
-    console.log('=== End Binary Sensors List ===');
-  }
+
 
   // Subscribe to data updates
   subscribe(callback: (data: HomeAssistantData) => void) {
@@ -509,20 +449,14 @@ class HomeAssistantService {
         return;
       }
       
-      console.log(`Processing entity: ${entityId} with state: ${state.new_state}`);
-      
       if (entityId.startsWith('binary_sensor.') || this.isBinarySensorEntity(entityId)) {
         newData.binarySensorData[entityId] = state as BinarySensorData;
-        console.log(`Updated binary sensor: ${entityId}`);
       } else if (entityId.startsWith('climate.')) {
         newData.climateData[entityId] = state as ClimateData;
-        console.log(`Updated climate device: ${entityId}`);
       } else if (entityId.startsWith('light.')) {
         newData.lightData[entityId] = state as LightData;
-        console.log(`Updated light: ${entityId}`);
       } else if (entityId.startsWith('sensor.')) {
         newData.sensorData[entityId] = state as SensorData;
-        console.log(`Updated sensor: ${entityId}`);
       }
     });
 
@@ -599,7 +533,7 @@ class HomeAssistantService {
     }
 
     this.reconnectAttempts++;
-    console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts}) in ${this.reconnectDelay}ms...`);
+
     
     setTimeout(() => {
       this.connectWebSocket();
@@ -661,7 +595,7 @@ class HomeAssistantService {
         timestamp: new Date().toISOString()
       };
       
-      console.log(`Toggling ${entityId} from ${entity.new_state} to ${newState}`);
+
       this.processEntityStates([updatedEntity]);
       
       // Also toggle via Backend API first, then fallback to Home Assistant API
@@ -681,7 +615,7 @@ class HomeAssistantService {
     try {
       if (entityId.startsWith('light.')) {
         const action = newState === 'on' ? 'turn_on' : 'turn_off';
-        console.log(`🔧 Calling Backend API: light.${action} for ${entityId}`);
+
         
         // Use direct backend API call for lights
         const { API_BASE_URL } = require('../config/api');
@@ -696,7 +630,7 @@ class HomeAssistantService {
         });
         
         if (response.ok) {
-          console.log(`✅ Successfully controlled light ${entityId}: ${newState}`);
+
         } else {
           console.warn(`❌ Backend light control failed for ${entityId}: ${response.status}`);
           // Fallback to Home Assistant API
@@ -704,7 +638,7 @@ class HomeAssistantService {
           await this.callHomeAssistantService('light', service, { entity_id: entityId });
         }
       } else if (entityId.startsWith('climate.')) {
-        console.log(`🔧 Calling Backend API: climate.set_hvac_mode for ${entityId} with mode ${newState}`);
+
         
         // For climate, use Home Assistant API directly for now
         await this.callHomeAssistantService('climate', 'set_hvac_mode', {
@@ -713,7 +647,7 @@ class HomeAssistantService {
         });
       }
       // Note: binary_sensor entities are typically read-only
-      console.log(`✅ Successfully processed toggle for ${entityId}`);
+
     } catch (error) {
       console.warn(`❌ Failed to toggle ${entityId}:`, error);
     }
@@ -748,7 +682,7 @@ class HomeAssistantService {
         attributes: updatedAttributes
       };
       
-      console.log(`🔧 Updating ${entityId}:`, updates);
+
       this.processEntityStates([updatedEntity]);
       
       // Try to update via Backend API first, then fallback to Home Assistant API
@@ -760,32 +694,32 @@ class HomeAssistantService {
   private async updateEntityViaBackendAPI(entityId: string, updates: any): Promise<void> {
     try {
       if (entityId.startsWith('climate.')) {
-        console.log(`🔧 Updating climate ${entityId} via Backend API:`, updates);
+
         
         // Use Home Assistant API directly for climate updates
         if (updates.temperature !== undefined) {
-          console.log(`Calling HA API: climate.set_temperature for ${entityId} to ${updates.temperature}°C`);
+
           await this.callHomeAssistantService('climate', 'set_temperature', {
             entity_id: entityId,
             temperature: updates.temperature
           });
         }
         if (updates.fan_mode !== undefined) {
-          console.log(`Calling HA API: climate.set_fan_mode for ${entityId} to ${updates.fan_mode}`);
+
           await this.callHomeAssistantService('climate', 'set_fan_mode', {
             entity_id: entityId,
             fan_mode: updates.fan_mode
           });
         }
         if (updates.hvac_mode !== undefined) {
-          console.log(`Calling HA API: climate.set_hvac_mode for ${entityId} to ${updates.hvac_mode}`);
+
           await this.callHomeAssistantService('climate', 'set_hvac_mode', {
             entity_id: entityId,
             hvac_mode: updates.hvac_mode
           });
         }
         
-        console.log(`✅ Successfully updated climate ${entityId}`);
+
       }
     } catch (error) {
       console.warn(`❌ Failed to update ${entityId}:`, error);
@@ -799,7 +733,7 @@ class HomeAssistantService {
     color_temp?: number;
   }): Promise<void> {
     try {
-      console.log(`🔧 Controlling light ${entityId} -> ${action} via Home Assistant API`);
+
       
       // Use Home Assistant API directly for light control
       const serviceData: any = { entity_id: entityId };
@@ -816,7 +750,7 @@ class HomeAssistantService {
         }
       }
 
-      console.log(`Calling HA API: light.${action} for ${entityId}`, serviceData);
+
       await this.callHomeAssistantService('light', action, serviceData);
       
       // Update local state immediately for UI responsiveness
@@ -832,7 +766,7 @@ class HomeAssistantService {
         this.processEntityStates([updatedEntity]);
       }
       
-      console.log(`✅ Successfully controlled light ${entityId}`);
+
     } catch (error) {
       console.error(`❌ Failed to control light ${entityId}:`, error);
       throw error;
@@ -851,7 +785,7 @@ class HomeAssistantService {
       const apiUrl = await homeAssistantConfigService.getApiUrl();
       const serviceUrl = `${apiUrl}/services/${domain}/${service}`;
       
-      console.log(`🔧 Calling service: ${serviceUrl}`);
+
       
       const response = await fetchWithTimeout(serviceUrl, {
         method: 'POST',
@@ -877,28 +811,28 @@ class HomeAssistantService {
   // Refresh specific entity data from Home Assistant API
   async refreshEntityFromAPI(entityId: string): Promise<void> {
     try {
-      console.log(`🔄 Refreshing entity ${entityId} from API`);
+
       
       // Use Home Assistant API via our backend service
       if (entityId.startsWith('climate.')) {
         const climateData = await homeAssistantApiService.fetchClimateState(entityId);
         if (climateData) {
           this.processEntityStates([climateData]);
-          console.log(`✅ Successfully refreshed climate ${entityId}`);
+
           return;
         }
       } else if (entityId.startsWith('light.')) {
         const lightData = await homeAssistantApiService.fetchLightState(entityId);
         if (lightData) {
           this.processEntityStates([lightData]);
-          console.log(`✅ Successfully refreshed light ${entityId}`);
+
           return;
         }
       } else if (entityId.startsWith('binary_sensor.')) {
         const binaryData = await homeAssistantApiService.fetchBinarySensorState(entityId);
         if (binaryData) {
           this.processEntityStates([binaryData]);
-          console.log(`✅ Successfully refreshed binary sensor ${entityId}`);
+
           return;
         }
       }

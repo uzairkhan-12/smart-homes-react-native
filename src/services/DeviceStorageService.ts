@@ -153,7 +153,7 @@ class DeviceStorageService {
   async getConfiguredDevices(): Promise<SensorDevice[]> {
     try {
       const devices = await this.loadDevices();
-      console.log('Loaded devices from storage:', devices);
+
       const allDevices: SensorDevice[] = [];
 
       // Add array devices that have main entities configured
@@ -178,14 +178,14 @@ class DeviceStorageService {
         allDevices.push(devices.security);
       }
 
-      console.log('📱 Configured devices found:', allDevices.length);
+
       allDevices.forEach(device => {
-        console.log(`  - ${device.name} (${device.type}): ${device.entity}`);
+
         if ((device as any).motion_sensor) {
-          console.log(`    🎥 Motion sensor: ${(device as any).motion_sensor}`);
+
         }
         if ((device as any).occupancy_sensor) {
-          console.log(`    🎥 Occupancy sensor: ${(device as any).occupancy_sensor}`);
+
         }
       });
 
@@ -200,7 +200,7 @@ class DeviceStorageService {
   async getAllDevices(): Promise<SensorDevice[]> {
     try {
       const devices = await this.loadDevices();
-      console.log('Loaded all devices from storage:', devices);
+
       const allDevices: SensorDevice[] = [];
 
       // Add all array devices regardless of entity configuration

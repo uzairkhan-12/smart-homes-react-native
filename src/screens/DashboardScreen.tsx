@@ -49,21 +49,6 @@ const DashboardScreen: React.FC = () => {
   useEffect(() => {
     // Subscribe to data updates
     const unsubscribe = homeAssistantService.subscribe((data: HomeAssistantData) => {
-      console.log('📡 Received data update from HomeAssistant service:', {
-        binarySensors: Object.keys(data.binarySensorData).length,
-        climate: Object.keys(data.climateData).length,
-        lights: Object.keys(data.lightData).length,
-        sensors: Object.keys(data.sensorData).length
-      });
-      
-      // Log binary sensor details
-      if (Object.keys(data.binarySensorData).length > 0) {
-        console.log('📡 Binary sensors received:', Object.keys(data.binarySensorData));
-        Object.entries(data.binarySensorData).forEach(([id, sensorData]) => {
-          console.log(`  - ${id}: ${sensorData.new_state}`);
-        });
-      }
-      
       setHaData(data);
       
       // Update connection status
@@ -154,28 +139,21 @@ const DashboardScreen: React.FC = () => {
   const loadConfiguredDevices = async () => {
     try {
       setLoading(true);
-      console.log('🔄 Starting loadConfiguredDevices...');
       
       // Fix camera configuration if needed (one-time fix)
       const wasFixed = await ensureCorrectCameraConfig();
-      if (wasFixed) {
-        console.log('✅ Camera configuration was fixed');
-      }
       
       // Ensure radar sensors count is correct (migration helper)
       await deviceStorageService.ensureRadarSensorsCount();
       
       // Use getAllDevices to show all devices, including those without entities
       const devices = await deviceStorageService.getAllDevices();
-      console.log('📱 Loaded devices from storage:', devices.length);
       setConfiguredDevices(devices);
       
       // Initialize HomeAssistant service with only configured devices (those with entities) for API loading
       const configuredOnly = await deviceStorageService.getConfiguredDevices();
-      console.log('🔗 Configured devices for HA service:', configuredOnly.length);
       
       await homeAssistantService.initializeWithConfiguredDevices(configuredOnly);
-      console.log('✅ HomeAssistant service initialized');
       
     } catch (error) {
       console.error('❌ Error in loadConfiguredDevices:', error);
@@ -216,8 +194,6 @@ const DashboardScreen: React.FC = () => {
 
   const toggleDevice = async (deviceId: string, deviceType: string, entityId: string) => {
     try {
-      console.log(`Toggling ${deviceType} device: ${entityId}`);
-      
       // Use the HomeAssistant service to toggle the entity
       homeAssistantService.toggleEntity(entityId);
       
@@ -292,7 +268,6 @@ const DashboardScreen: React.FC = () => {
     const directData = haData.binarySensorData[device.entity];
     if (directData) {
       const isActive = directData.new_state === 'on';
-      console.log('Direct binary sensor data found for', device.entity, device.type);
       switch (device.type) {
         case 'water':
           return { 
@@ -449,15 +424,6 @@ const DashboardScreen: React.FC = () => {
                 itemsPerRow={2}
               >
                 {devices.map(camera => {
-                  console.log(`Processing camera device: ${camera.name} (${camera.id})`);
-                  
-                  // Debug camera 2 specifically
-                  if (camera.id === 'camera_2') {
-                    console.log('=== CAMERA 2 DEBUG ===');
-                    console.log('Camera 2 from storage:', JSON.stringify(camera, null, 2));
-                    console.log('Available WebSocket binary sensors:', Object.keys(haData.binarySensorData));
-                  }
-                  
                   // Get motion and occupancy sensor entities from storage (not hardcoded)
                   let motionSensor = null;
                   let occupancySensor = null;
@@ -465,28 +431,11 @@ const DashboardScreen: React.FC = () => {
                   // Use sensor entities from camera storage configuration
                   if (camera.motion_sensor) {
                     motionSensor = haData.binarySensorData[camera.motion_sensor];
-                    console.log(`Looking for motion sensor: ${camera.motion_sensor}`, motionSensor ? 'FOUND' : 'NOT FOUND');
                   }
                   
                   if (camera.occupancy_sensor) {
                     occupancySensor = haData.binarySensorData[camera.occupancy_sensor];
-                    console.log(`Looking for occupancy sensor: ${camera.occupancy_sensor}`, occupancySensor ? 'FOUND' : 'NOT FOUND');
                   }
-                  
-                  // Debug camera 2 sensor mapping
-                  if (camera.id === 'camera_2') {
-                    console.log('Camera 2 sensor mapping from storage:', camera);
-                    console.log('- Motion sensor entity:', camera.motion_sensor);
-                    console.log('- Motion sensor data:', motionSensor ? JSON.stringify(motionSensor, null, 2) : 'NOT FOUND');
-                    console.log('- Occupancy sensor entity:', camera.occupancy_sensor);
-                    console.log('- Occupancy sensor data:', occupancySensor ? JSON.stringify(occupancySensor, null, 2) : 'NOT FOUND');
-                    console.log('=== END CAMERA 2 DEBUG ===');
-                  }
-                  
-                  console.log(`Camera ${camera.name} sensors from storage:`, {
-                    motion: motionSensor ? `${motionSensor.entity_id}: ${motionSensor.new_state}` : `${camera.motion_sensor}: NOT FOUND`,
-                    occupancy: occupancySensor ? `${occupancySensor.entity_id}: ${occupancySensor.new_state}` : `${camera.occupancy_sensor}: NOT FOUND`
-                  });
                   
                   // Create enhanced camera object with sensor data
                   const cameraWithSensors = {

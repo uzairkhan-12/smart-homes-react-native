@@ -63,7 +63,7 @@ export class HomeAssistantApiService {
 
   // Fetch multiple entities in parallel
   private async fetchMultipleEntityStates(entityIds: string[]): Promise<{ [entityId: string]: HAApiEntityState }> {
-    console.log(`🔍 Fetching states for ${entityIds.length} entities:`, entityIds);
+
     
     const promises = entityIds.map(async (entityId) => {
       const state = await this.fetchEntityState(entityId);
@@ -80,14 +80,14 @@ export class HomeAssistantApiService {
       if (state) {
         statesMap[entityId] = state;
         successCount++;
-        console.log(`✅ Successfully fetched: ${entityId}`);
+
       } else {
         failureCount++;
-        console.log(`❌ Failed to fetch: ${entityId}`);
+
       }
     });
 
-    console.log(`📊 Fetch results: ${successCount} successful, ${failureCount} failed`);
+
     return statesMap;
   }
 
@@ -110,7 +110,7 @@ export class HomeAssistantApiService {
     lightData: { [key: string]: LightData };
     sensorData: { [key: string]: SensorData };
   }> {
-    console.log('Fetching initial states for entities:', entityIds);
+
     
     const apiStates = await this.fetchMultipleEntityStates(entityIds);
     
@@ -135,12 +135,7 @@ export class HomeAssistantApiService {
       }
     });
 
-    console.log('Fetched initial states:', {
-      binarySensors: Object.keys(result.binarySensorData).length,
-      climateDevices: Object.keys(result.climateData).length,
-      lights: Object.keys(result.lightData).length,
-      sensors: Object.keys(result.sensorData).length
-    });
+
 
     return result;
   }
@@ -204,7 +199,7 @@ export class HomeAssistantApiService {
 
       if (response.ok) {
         const data: HAApiEntityState[] = await response.json();
-        console.log(`Fetched ${data.length} total states from Home Assistant`);
+
         return data;
       } else {
         console.warn(`Failed to fetch all states: ${response.status} ${response.statusText}`);
@@ -225,7 +220,7 @@ export class HomeAssistantApiService {
       // Use the updated method that handles proxy/direct URL logic
       const apiUrl = await homeAssistantConfigService.getApiUrl();
       
-      console.log(`🔍 Testing API connection to: ${apiUrl}`);
+
       
       const response = await fetchWithTimeout(apiUrl, {
         method: 'GET',
@@ -237,7 +232,7 @@ export class HomeAssistantApiService {
       });
 
       const success = response.ok;
-      console.log(success ? '✅ API connection successful' : `❌ API connection failed: ${response.status}`);
+
       return success;
     } catch (error) {
       console.warn('❌ Home Assistant API connection test failed:', error);
