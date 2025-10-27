@@ -2,17 +2,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Alert,
-    Image,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -106,13 +106,23 @@ export default function LoginScreen() {
       flex: 1,
       backgroundColor: isDark ? '#121212' : '#f5f5f5',
     },
+    logoTopContainer: {
+      position: 'absolute',
+      top: 50,
+      left: 20,
+      zIndex: 1000,
+    },
+    topLogo: {
+      width: 70, // Increased from 50
+      height: 70, // Increased from 50
+      resizeMode: 'contain',
+    },
     themeToggleContainer: {
       position: 'absolute',
       top: 50,
       right: 20,
       zIndex: 1000,
     },
-    // Remove the content paddingBottom since footer is now properly positioned
     content: {
       flexGrow: 1,
       justifyContent: 'center',
@@ -123,8 +133,8 @@ export default function LoginScreen() {
       marginBottom: 32,
     },
     logoImage: {
-      width: 160,
-      height: 120,
+      width: 200, // Increased from 160
+      height: 150, // Increased from 120
     },
     title: {
       fontSize: 32,
@@ -214,42 +224,6 @@ export default function LoginScreen() {
       borderRadius: 8,
       backgroundColor: isDark ? '#2a2a2a' : '#f0f0f0',
     },
-    // Improved footer styling
-    footerContainer: {
-      width: '100%',
-      backgroundColor: isDark ? '#1a1a1a' : '#f8f9fa',
-      borderTopWidth: 1,
-      borderTopColor: isDark ? '#374151' : '#e5e7eb',
-      paddingVertical: 16,
-      paddingBottom: Platform.OS === 'ios' ? 34 : 16,
-      alignItems: 'center',
-      justifyContent: 'center',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: -2 },
-      shadowOpacity: 0.15,
-      shadowRadius: 6,
-      elevation: 10,
-    },
-    footerTextRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    footerText: {
-      fontSize: 16,
-      color: isDark ? '#9ca3af' : '#6b7280',
-      fontWeight: '500',
-    },
-    footerHeart: {
-      color: '#e63946',
-      marginHorizontal: 6,
-      fontSize: 18,
-    },
-    footerLogo: {
-      width: 50,
-      height: 50,
-      resizeMode: 'contain',
-      marginLeft: 6,
-    },
   });
 
   return (
@@ -258,6 +232,19 @@ export default function LoginScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
+        {/* PM Logo in top left - Larger size */}
+        <View style={styles.logoTopContainer}>
+          <Image
+            source={
+              isDark
+                ? require('@/assets/images/whitelogo.png')
+                : require('@/assets/images/PMLogo.png')
+            }
+            style={styles.topLogo}
+            resizeMode="contain"
+          />
+        </View>
+
         {/* Floating Theme Toggle */}
         <View style={styles.themeToggleContainer}>
           <TouchableOpacity
@@ -306,7 +293,7 @@ export default function LoginScreen() {
                       focusedIndex === index && styles.codeInputFocused,
                       code[index] && styles.codeInputFilled,
                     ]}
-                    value={code[index]}
+                    value={code[index] ? '*' : ''} // Show asterisk instead of number
                     onChangeText={(text) => handleCodeChange(text, index)}
                     onFocus={() => setFocusedIndex(index)}
                     onBlur={() => setFocusedIndex(null)}
@@ -332,7 +319,7 @@ export default function LoginScreen() {
                       focusedIndex === index && styles.codeInputFocused,
                       code[index] && styles.codeInputFilled,
                     ]}
-                    value={code[index]}
+                    value={code[index] ? '*' : ''} // Show asterisk instead of number
                     onChangeText={(text) => handleCodeChange(text, index)}
                     onFocus={() => setFocusedIndex(index)}
                     onBlur={() => setFocusedIndex(null)}
@@ -364,24 +351,7 @@ export default function LoginScreen() {
             </Text>
           </ScrollView>
 
-          {/* ✅ Improved Sticky Footer */}
-          {!keyboardVisible && (
-            <View style={styles.footerContainer}>
-              <View style={styles.footerTextRow}>
-                <Text style={styles.footerText}>Made with</Text>
-                <Text style={styles.footerHeart}>♥</Text>
-                <Text style={styles.footerText}>by</Text>
-                <Image
-                  source={
-                    isDark
-                      ? require('../assets/images/whitelogo.png')
-                      : require('../assets/images/PMLogo.png')
-                  }
-                  style={styles.footerLogo}
-                />
-              </View>
-            </View>
-          )}
+          {/* Footer removed */}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -2,12 +2,12 @@ import { useTheme } from '@/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SensorData, SensorDevice } from '../../types';
 
@@ -98,7 +98,7 @@ export default function TempHumidityDetailsModal({
         <View style={styles.dataContainer}>
           {/* Temperature */}
           {temperature && (
-            <View style={styles.dataItem}>
+            <View style={[styles.dataItem, isDark && styles.dataItemDark]}>
               <View style={styles.dataHeader}>
                 <Ionicons 
                   name="thermometer-outline" 
@@ -126,7 +126,7 @@ export default function TempHumidityDetailsModal({
 
           {/* Humidity */}
           {humidity && (
-            <View style={styles.dataItem}>
+            <View style={[styles.dataItem, isDark && styles.dataItemDark]}>
               <View style={styles.dataHeader}>
                 <Ionicons 
                   name="water-outline" 
@@ -365,6 +365,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
     borderRadius: 12,
     padding: 16,
+  },
+  dataItemDark: {
+    backgroundColor: '#2a2a2a',
   },
   dataHeader: {
     flexDirection: 'row',

@@ -374,10 +374,13 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   closeButton: {
-    padding: 8,
-    borderRadius: 12,
-    backgroundColor: '#f5f5f5',
-  },
+  width: 32,
+  height: 32,
+  borderRadius: 16,
+  backgroundColor: 'transparent',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
   statusCard: {
     backgroundColor: '#f8f9fa',
     borderRadius: 16,

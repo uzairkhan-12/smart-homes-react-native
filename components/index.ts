@@ -10,3 +10,9 @@ export { default as AcSettingsModal } from './Modals/AcSettingsModal';
 
 // Sections
 export { default as DeviceSection } from './Sections/DeviceSection';
+
+// Additional Components
+export { default as CameraDetailsModal } from '../src/components/Modals/CameraDetailsModal';
+export { default as SensorDetailsModal } from '../src/components/Modals/SensorDetailsModal';
+export { default as SensorStatusPanel } from '../src/components/SensorStatusPanel';
+

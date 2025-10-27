@@ -1,6 +1,6 @@
 import { useTheme } from '@/context/ThemeContext';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { SensorDevice } from '../../types';
 
 interface DeviceSectionProps {
@@ -24,10 +24,7 @@ const DeviceSection: React.FC<DeviceSectionProps> = ({
 
   return (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, isDarkTheme && styles.textDark]}>
-        {icon} {title} ({devices.length})
-      </Text>
-      <View style={[styles.grid, { gap: 12 }]}>
+      <View style={[styles.grid, { gap: 6 }]}>
         {children}
       </View>
     </View>
@@ -36,14 +33,15 @@ const DeviceSection: React.FC<DeviceSectionProps> = ({
 
 const styles = StyleSheet.create({
   section: {
-    marginBottom: 24,
-    marginTop: 8,
+    marginBottom: 12,
+    marginTop: 0,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 14,
     fontWeight: '700',
-    marginBottom: 16,
+    marginBottom: 8,
     color: '#333',
+    paddingHorizontal: 4,
   },
   grid: {
     flexDirection: 'row',

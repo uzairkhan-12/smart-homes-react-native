@@ -18,58 +18,7 @@ const CameraCard: React.FC<CameraCardProps> = ({ camera, cardWidth }: any) => {
   return (
     <View style={[styles.card, { width: cardWidth }]}>
       <View style={[styles.deviceCard, isDarkTheme && styles.deviceCardDark]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.deviceHeader}>
-            <Text style={styles.cameraIcon}>📹</Text>
-            <View style={styles.deviceInfo}>
-              <Text
-                style={[styles.deviceName, isDarkTheme && styles.textDark]}
-                numberOfLines={1}
-              >
-                {camera.name}
-              </Text>
-              <Text
-                style={[
-                  styles.deviceType,
-                  isDarkTheme && styles.textSecondaryDark,
-                ]}
-                numberOfLines={1}
-              >
-                Camera
-              </Text>
-            </View>
-          </View>
-
-          {/* Sensor badges */}
-          <View style={styles.sensorBadges}>
-            {/* Motion Badge */}
-            <View
-              style={[
-                styles.badge,
-                hasMotionSensor ? styles.badgeDetected : styles.badgeClear,
-              ]}
-            >
-              <Text style={styles.badgeText}>
-                👁️ {hasMotionSensor ? 'Motion Detected' : 'No Motion'}
-              </Text>
-            </View>
-
-            {/* Occupancy Badge */}
-            <View
-              style={[
-                styles.badge,
-                hasOccupancySensor ? styles.badgeDetected : styles.badgeClear,
-              ]}
-            >
-              <Text style={styles.badgeText}>
-                🚶 {hasOccupancySensor ? 'Occupied' : 'Clear'}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Camera Preview */}
+        {/* Camera Preview with Overlay Info */}
         <View
           style={[styles.cameraPreview, isDarkTheme && styles.cameraPreviewDark]}
         >
@@ -83,13 +32,53 @@ const CameraCard: React.FC<CameraCardProps> = ({ camera, cardWidth }: any) => {
                 allowsFullscreenVideo={false}
                 scrollEnabled={false}
               />
-              {/* LIVE Badge */}
-              <View style={styles.liveBadgeContainer}>
-                <Text style={styles.liveBadgeText}>LIVE</Text>
+              {/* Overlay Info */}
+              <View style={styles.overlayContainer}>
+                {/* Top Left - Camera Name */}
+                <View style={styles.topLeftOverlay}>
+                  <Text style={styles.cameraName}>
+                    📹 {camera.name}
+                  </Text>
+                </View>
+
+                {/* Top Right - Sensor Badges */}
+                <View style={styles.topRightOverlay}>
+                  {/* Motion Badge */}
+                  <View
+                    style={[
+                      styles.sensorBadge,
+                      hasMotionSensor ? styles.badgeActive : styles.badgeInactive,
+                    ]}
+                  >
+                    <Text style={styles.sensorBadgeText}>
+                      👁️ {hasMotionSensor ? 'Motion' : 'Clear'}
+                    </Text>
+                  </View>
+
+                  {/* Occupancy Badge */}
+                  <View
+                    style={[
+                      styles.sensorBadge,
+                      hasOccupancySensor ? styles.badgeActive : styles.badgeInactive,
+                    ]}
+                  >
+                    <Text style={styles.sensorBadgeText}>
+                      🚶 {hasOccupancySensor ? 'Occupied' : 'Clear'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Bottom Right - LIVE Badge */}
+                <View style={styles.liveBadgeContainer}>
+                  <Text style={styles.liveBadgeText}>LIVE</Text>
+                </View>
               </View>
             </>
           ) : (
             <View style={styles.placeholderContainer}>
+              <Text style={styles.cameraName}>
+                📹 {camera.name}
+              </Text>
               <Text
                 style={[
                   styles.cameraPlaceholder,
@@ -101,26 +90,6 @@ const CameraCard: React.FC<CameraCardProps> = ({ camera, cardWidth }: any) => {
             </View>
           )}
         </View>
-
-        {/* Footer */}
-        <View style={styles.footer}>
-          <View style={styles.cameraStatus}>
-            <View
-              style={[
-                styles.statusIndicator,
-                { backgroundColor: camera.stream_url ? '#4CAF50' : '#ff6b6b' },
-              ]}
-            />
-            <Text
-              style={[
-                styles.cameraStatusText,
-                isDarkTheme && styles.textSecondaryDark,
-              ]}
-            >
-              {camera.stream_url ? 'Online' : 'Offline'}
-            </Text>
-          </View>
-        </View>
       </View>
     </View>
   );
@@ -128,83 +97,27 @@ const CameraCard: React.FC<CameraCardProps> = ({ camera, cardWidth }: any) => {
 
 const styles = StyleSheet.create({
   card: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   deviceCard: {
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 12,
+    padding: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
-    minHeight: 200,
   },
   deviceCardDark: {
     backgroundColor: '#1e1e1e',
     shadowOpacity: 0.3,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  deviceHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  cameraIcon: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  deviceInfo: {
-    flex: 1,
-  },
-  deviceName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 2,
-  },
-  deviceType: {
-    fontSize: 12,
-    color: '#666',
-  },
-  sensorBadges: {
-    flexDirection: 'row',
-    gap: 6,
-    marginLeft: 8,
-    flexWrap: 'wrap',
-    justifyContent: 'flex-end',
-  },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  badgeDetected: {
-    backgroundColor: '#ffe6e6',
-    borderColor: '#ff3b30',
-  },
-  badgeClear: {
-    backgroundColor: '#e8f5e8',
-    borderColor: '#4CAF50',
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#222',
-  },
   cameraPreview: {
-    height: 140,
+    height: 290,
     backgroundColor: '#000',
     borderRadius: 8,
     overflow: 'hidden',
-    marginBottom: 12,
     position: 'relative',
   },
   cameraPreviewDark: {
@@ -213,13 +126,65 @@ const styles = StyleSheet.create({
   webview: {
     flex: 1,
   },
+  overlayContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    pointerEvents: 'none',
+  },
+  topLeftOverlay: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+  },
+  topRightOverlay: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  cameraName: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    textShadowColor: '#000',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  sensorBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  },
+  badgeActive: {
+    backgroundColor: 'rgba(255, 59, 48, 0.9)',
+  },
+  badgeInactive: {
+    backgroundColor: 'rgba(76, 175, 80, 0.9)',
+  },
+  sensorBadgeText: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: '#fff',
+    textShadowColor: '#000',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 1,
+  },
   liveBadgeContainer: {
     position: 'absolute',
-    bottom: 6,
-    right: 6,
-    backgroundColor: 'red',
+    bottom: 8,
+    right: 8,
+    backgroundColor: '#ff3b30',
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 3,
     borderRadius: 6,
   },
   liveBadgeText: {
@@ -232,30 +197,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#983535ff',
+    backgroundColor: '#2a2a2a',
+    gap: 8,
   },
   cameraPlaceholder: {
     fontSize: 12,
-    color: '#666',
-    fontWeight: '500',
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  cameraStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  statusIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  cameraStatusText: {
-    fontSize: 11,
     color: '#666',
     fontWeight: '500',
   },

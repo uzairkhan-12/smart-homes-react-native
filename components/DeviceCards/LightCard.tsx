@@ -71,18 +71,18 @@ const LightCard: React.FC<LightCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    marginBottom: 12,
+    marginBottom: 6,
   },
   controlCard: {
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 12,
+    padding: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
-    minHeight: 80,
+    minHeight: 72,
     flex: 1,
   },
   controlCardDark: {
@@ -94,12 +94,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   controlIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   controlIconContainerActive: {
     transform: [{ scale: 1.05 }],
@@ -108,13 +108,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   controlName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   controlType: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#666',
   },
   toggleWrapper: {

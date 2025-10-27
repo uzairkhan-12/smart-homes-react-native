@@ -2,7 +2,6 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { View } from 'react-native';
 
-import UniversalFooter from '@/components/ui/UniversalFooter';
 import { useAuth } from '@/context/AuthContext';
 
 export default function TabLayout() {
@@ -28,7 +27,7 @@ export default function TabLayout() {
           }}
         />
       </Tabs>
-      {isAuthenticated && <UniversalFooter />}
+      {/* {isAuthenticated && <UniversalFooter />} */}
     </View>
   );
 }
