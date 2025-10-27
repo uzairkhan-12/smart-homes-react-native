@@ -1,14 +1,17 @@
+import { getColors } from '@/constants/colors';
 import { useTheme } from '@/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Modal,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  useColorScheme,
 } from 'react-native';
 import { homeAssistantConfigService } from '../../src/services/HomeAssistantConfigService';
 
@@ -21,8 +24,13 @@ const HomeAssistantConfigModal: React.FC<HomeAssistantConfigModalProps> = ({
   visible,
   onClose,
 }) => {
-  const { isDark: isDarkTheme } = useTheme();
-  const [baseUrl, setBaseUrl] = useState('http://192.168.100.60:8123');
+  const { theme, setTheme } = useTheme();
+  const isDarkTheme = theme === 'dark' || (theme === 'system' && useColorScheme() === 'dark');
+  const colors = getColors(isDarkTheme);
+  
+  // Configuration fields
+  const [httpApiUrl, setHttpApiUrl] = useState('http://192.168.100.60:8123/api');
+  const [websocketUrl, setWebsocketUrl] = useState('ws://192.168.100.95:3040/api/ws/entities_live');
   const [token, setToken] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
@@ -37,7 +45,8 @@ const HomeAssistantConfigModal: React.FC<HomeAssistantConfigModalProps> = ({
   const loadCurrentConfig = async () => {
     try {
       const config = await homeAssistantConfigService.getConfig();
-      setBaseUrl(config.baseUrl);
+      setHttpApiUrl(config.httpApiUrl || config.baseUrl || 'http://192.168.100.60:8123/api');
+      setWebsocketUrl(config.websocketUrl);
       setToken(config.token);
       
       // Check current connection status
@@ -49,15 +58,19 @@ const HomeAssistantConfigModal: React.FC<HomeAssistantConfigModalProps> = ({
   };
 
   const testConnection = async () => {
-    if (!baseUrl.trim() || !token.trim()) {
-      Alert.alert('Error', 'Please enter both Base URL and Token');
+    if (!httpApiUrl.trim() || !token.trim()) {
+      Alert.alert('Error', 'Please enter both HTTP API URL and Token');
       return;
     }
 
     setIsTesting(true);
     try {
       // Temporarily save config for testing
-      await homeAssistantConfigService.saveConfig({ baseUrl, token });
+      await homeAssistantConfigService.saveConfig({ 
+        httpApiUrl, 
+        websocketUrl, 
+        token 
+      });
       
       const result = await homeAssistantConfigService.testConnection();
       setIsConnected(result.success);
@@ -75,14 +88,18 @@ const HomeAssistantConfigModal: React.FC<HomeAssistantConfigModalProps> = ({
   };
 
   const saveConfig = async () => {
-    if (!baseUrl.trim() || !token.trim()) {
-      Alert.alert('Error', 'Please enter both Base URL and Token');
+    if (!httpApiUrl.trim() || !token.trim()) {
+      Alert.alert('Error', 'Please enter both HTTP API URL and Token');
       return;
     }
 
     setIsSaving(true);
     try {
-      await homeAssistantConfigService.saveConfig({ baseUrl, token });
+      await homeAssistantConfigService.saveConfig({ 
+        httpApiUrl, 
+        websocketUrl, 
+        token 
+      });
       Alert.alert('Success', 'Home Assistant configuration saved!', [
         { text: 'OK', onPress: onClose }
       ]);
@@ -105,7 +122,8 @@ const HomeAssistantConfigModal: React.FC<HomeAssistantConfigModalProps> = ({
           onPress: async () => {
             try {
               await homeAssistantConfigService.resetConfig();
-              setBaseUrl('http://192.168.100.60:8123');
+              setHttpApiUrl('http://192.168.100.60:8123/api');
+              setWebsocketUrl('ws://192.168.100.95:3040/api/ws/entities_live');
               setToken('');
               setIsConnected(false);
               Alert.alert('Success', 'Configuration reset to defaults');
@@ -126,19 +144,20 @@ const HomeAssistantConfigModal: React.FC<HomeAssistantConfigModalProps> = ({
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, isDarkTheme && styles.modalContentDark]}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <View style={[styles.modalContent, {backgroundColor: colors.surface}]}>
           <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, isDarkTheme && styles.textDark]}>
+            <Text style={[styles.modalTitle, {color: colors.text}]}>
               Home Assistant Configuration
             </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={isDarkTheme ? "#fff" : "#333"} />
+              <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
 
           <View style={styles.statusContainer}>
             <View style={styles.statusRow}>
-              <Text style={[styles.statusLabel, isDarkTheme && styles.textSecondaryDark]}>
+              <Text style={[styles.statusLabel, {color: colors.textSecondary}]}>
                 Connection Status:
               </Text>
               <View style={[
@@ -156,53 +175,87 @@ const HomeAssistantConfigModal: React.FC<HomeAssistantConfigModalProps> = ({
           </View>
 
           <View style={styles.formContainer}>
-            <Text style={[styles.fieldLabel, isDarkTheme && styles.textDark]}>
-              Base URL
+            <Text style={[styles.fieldLabel, {color: colors.text}]}>
+              HTTP API URL
             </Text>
             <TextInput
-              style={[styles.textInput, isDarkTheme && styles.textInputDark]}
-              value={baseUrl}
-              onChangeText={setBaseUrl}
-              placeholder="http://192.168.100.60:8123"
-              placeholderTextColor={isDarkTheme ? '#666' : '#999'}
+              style={[styles.textInput, {
+                borderColor: colors.border,
+                backgroundColor: colors.surfaceSecondary,
+                color: colors.text
+              }]}
+              value={httpApiUrl}
+              onChangeText={setHttpApiUrl}
+              placeholder="http://192.168.100.60:8123/api"
+              placeholderTextColor={colors.textSecondary}
               autoCapitalize="none"
               autoCorrect={false}
             />
+            <Text style={[styles.helpText, {color: colors.textSecondary}]}>
+              The HTTP API endpoint for REST calls (e.g., http://your-ha-ip:8123/api)
+            </Text>
 
-            <Text style={[styles.fieldLabel, isDarkTheme && styles.textDark]}>
+            <Text style={[styles.fieldLabel, {color: colors.text}]}>
+              WebSocket URL
+            </Text>
+            <TextInput
+              style={[styles.textInput, {
+                borderColor: colors.border,
+                backgroundColor: colors.surfaceSecondary,
+                color: colors.text
+              }]}
+              value={websocketUrl}
+              onChangeText={setWebsocketUrl}
+              placeholder="ws://192.168.100.95:3040/api/ws/entities_live"
+              placeholderTextColor={colors.textSecondary}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <Text style={[styles.helpText, {color: colors.textSecondary}]}>
+              The WebSocket endpoint for real-time updates
+            </Text>
+
+            <Text style={[styles.fieldLabel, {color: colors.text}]}>
               Long-Lived Access Token
             </Text>
             <TextInput
-              style={[styles.textInput, isDarkTheme && styles.textInputDark]}
+              style={[styles.textInput, {
+                borderColor: colors.border,
+                backgroundColor: colors.surfaceSecondary,
+                color: colors.text
+              }]}
               value={token}
               onChangeText={setToken}
               placeholder="Enter your Home Assistant token"
-              placeholderTextColor={isDarkTheme ? '#666' : '#999'}
+              placeholderTextColor={colors.textSecondary}
               secureTextEntry={true}
               autoCapitalize="none"
               autoCorrect={false}
             />
 
-            <Text style={[styles.helpText, isDarkTheme && styles.textSecondaryDark]}>
+            <Text style={[styles.helpText, {color: colors.textSecondary}]}>
               Get your token from Home Assistant → Profile → Security → Long-Lived Access Tokens
             </Text>
           </View>
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity
-              style={[styles.testButton, isDarkTheme && styles.testButtonDark]}
+              style={[styles.testButton, {
+                backgroundColor: colors.surfaceSecondary,
+                borderColor: colors.border
+              }]}
               onPress={testConnection}
-              disabled={isTesting || !baseUrl.trim() || !token.trim()}
+              disabled={isTesting || !httpApiUrl.trim() || !token.trim()}
             >
-              <Text style={[styles.testButtonText, isDarkTheme && styles.textDark]}>
+              <Text style={[styles.testButtonText, {color: colors.text}]}>
                 {isTesting ? 'Testing...' : 'Test Connection'}
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.saveButton, isDarkTheme && styles.saveButtonDark]}
+              style={[styles.saveButton, {backgroundColor: colors.primary}]}
               onPress={saveConfig}
-              disabled={isSaving || !baseUrl.trim() || !token.trim()}
+              disabled={isSaving || !httpApiUrl.trim() || !token.trim()}
             >
               <Text style={styles.saveButtonText}>
                 {isSaving ? 'Saving...' : 'Save Configuration'}
@@ -210,15 +263,16 @@ const HomeAssistantConfigModal: React.FC<HomeAssistantConfigModalProps> = ({
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.resetButton, isDarkTheme && styles.resetButtonDark]}
+              style={styles.resetButton}
               onPress={resetConfig}
             >
-              <Text style={[styles.resetButtonText, isDarkTheme && styles.textSecondaryDark]}>
+              <Text style={[styles.resetButtonText, {color: colors.textSecondary}]}>
                 Reset to Defaults
               </Text>
             </TouchableOpacity>
           </View>
         </View>
+      </ScrollView>
       </View>
     </Modal>
   );
@@ -232,16 +286,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
+  scrollView: {
+    flex: 1,
+    width: '100%',
+  },
   modalContent: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 24,
     width: '100%',
     maxWidth: 400,
-    maxHeight: '80%',
-  },
-  modalContentDark: {
-    backgroundColor: '#1e1e1e',
+    minHeight: '70%',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -252,7 +306,6 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
     flex: 1,
   },
   closeButton: {
@@ -268,7 +321,6 @@ const styles = StyleSheet.create({
   },
   statusLabel: {
     fontSize: 16,
-    color: '#666',
   },
   statusBadge: {
     paddingHorizontal: 12,
@@ -297,59 +349,39 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 8,
     marginTop: 16,
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    backgroundColor: '#fff',
-    color: '#333',
-  },
-  textInputDark: {
-    borderColor: '#444',
-    backgroundColor: '#2a2a2a',
-    color: '#fff',
   },
   helpText: {
     fontSize: 12,
-    color: '#666',
-    marginTop: 8,
+    marginTop: 6,
     lineHeight: 16,
   },
   buttonContainer: {
     gap: 12,
+    paddingBottom: 20,
   },
   testButton: {
-    backgroundColor: '#f5f5f5',
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  testButtonDark: {
-    backgroundColor: '#2a2a2a',
-    borderColor: '#444',
   },
   testButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
   },
   saveButton: {
-    backgroundColor: '#007AFF',
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
-  },
-  saveButtonDark: {
-    backgroundColor: '#1565C0',
   },
   saveButtonText: {
     color: '#fff',
@@ -362,18 +394,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
-  resetButtonDark: {
-    backgroundColor: 'transparent',
-  },
   resetButtonText: {
     fontSize: 14,
-    color: '#666',
-  },
-  textDark: {
-    color: '#fff',
-  },
-  textSecondaryDark: {
-    color: '#aaa',
   },
 });
 

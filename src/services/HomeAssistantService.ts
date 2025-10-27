@@ -3,9 +3,6 @@ import { fetchWithTimeout } from '../utils/fetch';
 import { homeAssistantApiService } from './HomeAssistantApiService';
 import { homeAssistantConfigService } from './HomeAssistantConfigService';
 
-// WebSocket Configuration
-const WS_API_URL = `ws://192.168.100.95:3040/api/ws/entities_live`;
-
 export interface EntityState {
   entity_id: string;
   old_state: string;
@@ -471,13 +468,15 @@ class HomeAssistantService {
   }
 
   // Connect to WebSocket for real-time updates
-  connectWebSocket(): void {
+  async connectWebSocket(): Promise<void> {
     if (this.websocket?.readyState === WebSocket.OPEN) {
       return;
     }
 
     try {
-      this.websocket = new WebSocket(WS_API_URL);
+      // Get WebSocket URL from configuration service
+      const websocketUrl = await homeAssistantConfigService.getWebSocketUrl();
+      this.websocket = new WebSocket(websocketUrl);
 
       this.websocket.onopen = () => {
         this.reconnectAttempts = 0;
@@ -536,7 +535,9 @@ class HomeAssistantService {
 
     
     setTimeout(() => {
-      this.connectWebSocket();
+      this.connectWebSocket().catch(error => {
+        console.error('Failed to reconnect WebSocket:', error);
+      });
     }, this.reconnectDelay);
   }
 

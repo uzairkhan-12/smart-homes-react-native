@@ -1,12 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { HA_DIRECT_CONFIG } from '../config/api';
-import { fetchWithTimeout } from '../utils/fetch';
 
 export interface HomeAssistantConfig {
-  baseUrl: string;
-  token: string;
-  websocketUrl: string;
-  useProxy: boolean;
+  httpApiUrl: string;      // HTTP API endpoint for REST calls
+  websocketUrl: string;    // WebSocket endpoint for real-time updates  
+  token: string;           // Long-lived access token
+  useProxy: boolean;       // Whether to use proxy server
+  // Legacy fields for backward compatibility
+  baseUrl?: string;
 }
 
 class HomeAssistantConfigService {
@@ -15,10 +16,11 @@ class HomeAssistantConfigService {
   
   // Default configuration - using direct Home Assistant API (no proxy)
   private defaultConfig: HomeAssistantConfig = {
-    baseUrl: HA_DIRECT_CONFIG.API_URL, // Direct HA API
+    httpApiUrl: HA_DIRECT_CONFIG.API_URL, // Direct HA HTTP API
+    websocketUrl: 'ws://192.168.100.95:3040/api/ws/entities_live', // WebSocket endpoint
     token: HA_DIRECT_CONFIG.TOKEN, // Use token from config
-    websocketUrl: 'ws://192.168.100.95:3040/api/ws/entities_live',
-    useProxy: false // No proxy needed with backend
+    useProxy: false, // No proxy needed with backend
+    baseUrl: HA_DIRECT_CONFIG.API_URL // Legacy compatibility
   };
 
   private constructor() {}
@@ -66,9 +68,14 @@ class HomeAssistantConfigService {
     await this.saveConfig({ token });
   }
 
-  // Update base URL
+  // Update HTTP API URL
+  async setHttpApiUrl(httpApiUrl: string): Promise<void> {
+    await this.saveConfig({ httpApiUrl });
+  }
+
+  // Update base URL (legacy method for backward compatibility)
   async setBaseUrl(baseUrl: string): Promise<void> {
-    await this.saveConfig({ baseUrl });
+    await this.saveConfig({ httpApiUrl: baseUrl, baseUrl });
   }
 
   // Update WebSocket URL
@@ -76,12 +83,18 @@ class HomeAssistantConfigService {
     await this.saveConfig({ websocketUrl });
   }
 
-  // Get API URL
+  // Get HTTP API URL
+  async getHttpApiUrl(): Promise<string> {
+    const config = await this.getConfig();
+    return config.httpApiUrl;
+  }
+
+  // Get API URL (legacy method for backward compatibility)
   async getApiUrl(): Promise<string> {
     const config = await this.getConfig();
     // If using proxy, return the base URL as it already includes the /ha-api path
-    // Otherwise, return the base URL directly (it should already include /api)
-    return config.baseUrl;
+    // Otherwise, return the HTTP API URL directly
+    return config.httpApiUrl || config.baseUrl || this.defaultConfig.httpApiUrl;
   }
 
   // Get WebSocket URL
@@ -99,7 +112,7 @@ class HomeAssistantConfigService {
   // Check if configuration is complete
   async isConfigured(): Promise<boolean> {
     const config = await this.getConfig();
-    return config.token.trim() !== '' && config.baseUrl.trim() !== '';
+    return config.token.trim() !== '' && config.httpApiUrl.trim() !== '';
   }
 
   // Reset to defaults
@@ -114,57 +127,60 @@ class HomeAssistantConfigService {
   }
 
   // Test connection with current config
-  async testConnection(): Promise<{ success: boolean; error?: string }> {
-    try {
-      const config = await this.getConfig();
-      
-      if (!config.token) {
-        return { success: false, error: 'No token configured' };
-      }
+async testConnection(): Promise<{ success: boolean; error?: string }> {
+  try {
+    const config = await this.getConfig();
 
-      // For proxy, test the root endpoint directly
-      const testUrl = config.useProxy ? config.baseUrl : `${config.baseUrl}/api`;
-      
-      console.log(`Testing connection to: ${testUrl}`);
-
-      const response = await fetchWithTimeout(testUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${config.token}`,
-          'Content-Type': 'application/json',
-        },
-        timeout: 5000, // 5 second timeout
-      });
-
-      if (response.ok) {
-        console.log('✅ Home Assistant connection successful');
-        return { success: true };
-      } else {
-        const errorMsg = `HTTP ${response.status}: ${response.statusText}`;
-        console.warn('❌ Home Assistant connection failed:', errorMsg);
-        return { 
-          success: false, 
-          error: errorMsg
-        };
-      }
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      console.warn('❌ Home Assistant connection error:', errorMsg);
-      
-      // Provide helpful error messages for common issues
-      if (errorMsg.includes('fetch')) {
-        return {
-          success: false,
-          error: 'Network error - Check if CORS proxy is running (npm run cors-proxy)'
-        };
-      }
-      
-      return {
-        success: false,
-        error: errorMsg
-      };
+    if (!config.websocketUrl) {
+      return { success: false, error: 'No WebSocket URL configured' };
     }
+    if (!config.token) {
+      return { success: false, error: 'No token configured' };
+    }
+
+    console.log(`🔌 Testing WebSocket connection to: ${config.websocketUrl}`);
+
+    return new Promise((resolve) => {
+      try {
+        const ws = new WebSocket(config.websocketUrl);
+
+        const timeout = setTimeout(() => {
+          ws.close();
+          resolve({ success: false, error: 'Connection timeout (5s)' });
+        }, 5000);
+
+        ws.onopen = () => {
+          clearTimeout(timeout);
+          console.log('✅ WebSocket connection successful');
+          ws.close();
+          resolve({ success: true });
+        };
+
+        ws.onerror = (err) => {
+          clearTimeout(timeout);
+          console.warn('❌ WebSocket connection failed:', err);
+          resolve({ success: false, error: 'WebSocket error' });
+        };
+
+        ws.onclose = (event) => {
+          if (!event.wasClean) {
+            resolve({
+              success: false,
+              error: `WebSocket closed unexpectedly (code ${event.code})`,
+            });
+          }
+        };
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : 'Unknown error';
+        console.warn('❌ WebSocket connection error:', msg);
+        resolve({ success: false, error: msg });
+      }
+    });
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, error: errorMsg };
   }
+}
 
   // Get connection status
   async getConnectionStatus(): Promise<{

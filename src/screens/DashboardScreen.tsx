@@ -1,6 +1,7 @@
 import { AcCard, AcSettingsModal, CameraCard, DeviceSection, LightCard, SensorDetailsModal, SensorStatusPanel } from '@/components';
 import DashboardHeader from '@/components/ui/DashboardHeader';
 import TempHumidityDetailsModal from '@/components/ui/TempHumidityDetailsModal';
+import { getColors } from '@/constants/colors';
 import { useTheme } from '@/context/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -11,6 +12,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useColorScheme,
   useWindowDimensions
 } from 'react-native';
 import { BinarySensorData, ClimateData, LightData, SensorData, SensorDevice } from '../../types';
@@ -25,7 +27,9 @@ const CARD_GAP = 12;
 
 const DashboardScreen: React.FC = () => {
   const { width: SCREEN_WIDTH } = useWindowDimensions();
-  const { isDark: isDarkTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
+  const isDarkTheme = theme === 'dark' || (theme === 'system' && useColorScheme() === 'dark');
+  const colors = getColors(isDarkTheme);
   const [configuredDevices, setConfiguredDevices] = useState<SensorDevice[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -60,7 +64,9 @@ const DashboardScreen: React.FC = () => {
 
     // Only connect if not already connected
     if (!homeAssistantService.isConnected()) {
-      homeAssistantService.connectWebSocket();
+      homeAssistantService.connectWebSocket().catch(error => {
+        console.error('Failed to connect WebSocket:', error);
+      });
     } else {
       setIsConnected(true);
     }
@@ -366,8 +372,8 @@ const DashboardScreen: React.FC = () => {
                 <RefreshControl 
                   refreshing={refreshing} 
                   onRefresh={onRefresh}
-                  tintColor={isDarkTheme ? "#fff" : "#007AFF"}
-                  colors={isDarkTheme ? ["#fff"] : ["#007AFF"]}
+                  tintColor={colors.primary}
+                  colors={[colors.primary]}
                 />
               }
               showsVerticalScrollIndicator={false}
@@ -541,12 +547,12 @@ const DashboardScreen: React.FC = () => {
                             <View style={styles.deviceHeader}>
                               <View style={[
                                 styles.deviceIconContainer,
-                                { backgroundColor: isDarkTheme ? '#2a2a2a' : '#f8f9fa' }
+                                { backgroundColor: colors.surfaceSecondary }
                               ]}>
                                 <Text style={styles.deviceIcon}>📱</Text>
                               </View>
                               <View style={styles.deviceInfo}>
-                                <Text style={[styles.deviceName, isDarkTheme && styles.textDark]} numberOfLines={1}>
+                                <Text style={[styles.deviceName, { color: colors.text }]} numberOfLines={1}>
                                   {device.name}
                                 </Text>
                                 <Text style={[styles.deviceType, isDarkTheme && styles.textSecondaryDark]} numberOfLines={1}>

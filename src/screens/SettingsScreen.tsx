@@ -1,4 +1,5 @@
 import SettingsHeader from '@/components/ui/SettingsHeader';
+import { getColors } from '@/constants/colors';
 import { useTheme } from '@/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -12,7 +13,8 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
+  useColorScheme
 } from 'react-native';
 import HomeAssistantConfigModal from '../../components/Modals/HomeAssistantConfigModal';
 import { deviceStorageService } from '../services/DeviceStorageService';
@@ -29,7 +31,85 @@ interface CameraDevice extends SensorDevice {
 }
 
 const SettingsScreen: React.FC = () => {
-  const { isDark: isDarkTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
+  const isDarkTheme = theme === 'dark' || (theme === 'system' && useColorScheme() === 'dark');
+  const colors = getColors(isDarkTheme);
+
+  const styles = StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    scrollView: { flex: 1 },
+    loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
+    header: {
+      backgroundColor: colors.surface,
+      paddingHorizontal: 16,
+      paddingTop: 20,
+      paddingBottom: 16,
+      marginBottom: 16,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 3.84,
+      elevation: 5,
+    },
+    headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+    title: { fontSize: 24, fontWeight: 'bold', color: colors.text, flex: 1 },
+    subtitle: { fontSize: 16, color: colors.textSecondary, marginBottom: 12 },
+    themeContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    quickActions: { flexDirection: 'row', gap: 12 },
+    quickActionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      backgroundColor: colors.surfaceSecondary,
+      borderRadius: 8,
+    },
+    quickActionText: { fontSize: 14, color: colors.primary, fontWeight: '500' },
+    section: {
+      backgroundColor: colors.surface,
+      marginHorizontal: 16,
+      marginBottom: 12,
+      borderRadius: 12,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 3.84,
+      elevation: 5,
+      overflow: 'hidden',
+    },
+    sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
+    sectionTitleContainer: { flex: 1 },
+    sectionTitle: { fontSize: 18, fontWeight: '600', color: colors.text },
+    deviceCount: { fontSize: 14, color: colors.textSecondary, marginTop: 2 },
+    devicesList: { paddingHorizontal: 16, paddingBottom: 16 },
+    deviceContainer: { marginBottom: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
+    deviceLabel: { fontSize: 14, fontWeight: '500', marginBottom: 8, color: colors.textSecondary },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 8,
+      fontSize: 16,
+      backgroundColor: colors.surfaceSecondary,
+      color: colors.text,
+    },
+    saveButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: colors.primary,
+      marginHorizontal: 16,
+      marginTop: 20,
+      marginBottom: 20,
+      padding: 16,
+      borderRadius: 12,
+    },
+    saveButtonText: { color: '#fff', fontSize: 18, fontWeight: '600' },
+    bottomSpacer: { height: 20 },
+  });
   const [devices, setDevices] = useState<StoredDevices | null>(null);
   const [loading, setLoading] = useState(true);
   const [haConfigModalVisible, setHaConfigModalVisible] = useState(false);
@@ -116,19 +196,19 @@ const SettingsScreen: React.FC = () => {
 
   // Generic device input (non-camera)
   const renderDeviceInput = (device: SensorDevice, deviceType: keyof StoredDevices) => (
-    <View key={device.id} style={[styles.deviceContainer, isDarkTheme && styles.deviceContainerDark]}>
-      <Text style={[styles.deviceLabel, isDarkTheme && styles.textDark]}>{device.name}</Text>
+    <View key={device.id} style={styles.deviceContainer}>
+      <Text style={styles.deviceLabel}>{device.name}</Text>
       <TextInput
-        style={[styles.input, isDarkTheme && styles.inputDark]}
+        style={styles.input}
         placeholder="Device Name"
-        placeholderTextColor={isDarkTheme ? '#888' : '#999'}
+        placeholderTextColor={colors.textSecondary}
         value={device.name}
         onChangeText={(value) => updateDevice(deviceType, device.id, 'name', value)}
       />
       <TextInput
-        style={[styles.input, isDarkTheme && styles.inputDark]}
+        style={styles.input}
         placeholder="Entity ID (e.g., sensor.water_level_1)"
-        placeholderTextColor={isDarkTheme ? '#888' : '#999'}
+        placeholderTextColor={colors.textSecondary}
         value={device.entity}
         onChangeText={(value) => updateDevice(deviceType, device.id, 'entity', value)}
         autoCapitalize="none"
@@ -138,35 +218,35 @@ const SettingsScreen: React.FC = () => {
 
   // Camera-specific inputs
   const renderCameraInput = (camera: CameraDevice, deviceType: keyof StoredDevices) => (
-    <View key={camera.id} style={[styles.deviceContainer, isDarkTheme && styles.deviceContainerDark]}>
-      <Text style={[styles.deviceLabel, isDarkTheme && styles.textDark]}>{camera.name}</Text>
+    <View key={camera.id} style={styles.deviceContainer}>
+      <Text style={styles.deviceLabel}>{camera.name}</Text>
       <TextInput
-        style={[styles.input, isDarkTheme && styles.inputDark]}
+        style={styles.input}
         placeholder="Camera Name"
-        placeholderTextColor={isDarkTheme ? '#888' : '#999'}
+        placeholderTextColor={colors.textSecondary}
         value={camera.name}
         onChangeText={(value) => updateDevice(deviceType, camera.id, 'name', value)}
       />
       <TextInput
-        style={[styles.input, isDarkTheme && styles.inputDark]}
+        style={styles.input}
         placeholder="Stream URL (e.g., rtsp://...)"
-        placeholderTextColor={isDarkTheme ? '#888' : '#999'}
+        placeholderTextColor={colors.textSecondary}
         value={camera.stream_url || ''}
         onChangeText={(value) => updateDevice(deviceType, camera.id, 'stream_url', value)}
         autoCapitalize="none"
       />
       <TextInput
-        style={[styles.input, isDarkTheme && styles.inputDark]}
+        style={styles.input}
         placeholder="Motion Sensor Entity ID"
-        placeholderTextColor={isDarkTheme ? '#888' : '#999'}
+        placeholderTextColor={colors.textSecondary}
         value={camera.motion_sensor || ''}
         onChangeText={(value) => updateDevice(deviceType, camera.id, 'motion_sensor', value)}
         autoCapitalize="none"
       />
       <TextInput
-        style={[styles.input, isDarkTheme && styles.inputDark]}
+        style={styles.input}
         placeholder="Occupancy Sensor Entity ID"
-        placeholderTextColor={isDarkTheme ? '#888' : '#999'}
+        placeholderTextColor={colors.textSecondary}
         value={camera.occupancy_sensor || ''}
         onChangeText={(value) => updateDevice(deviceType, camera.id, 'occupancy_sensor', value)}
         autoCapitalize="none"
@@ -175,11 +255,11 @@ const SettingsScreen: React.FC = () => {
   );
 
   const renderDeviceSection = (title: string, devices: SensorDevice[], deviceType: keyof StoredDevices) => (
-    <View style={[styles.section, isDarkTheme && styles.sectionDark]}>
+    <View style={styles.section}>
       <TouchableOpacity style={styles.sectionHeader} onPress={() => toggleSection(deviceType)} activeOpacity={0.7}>
         <View style={styles.sectionTitleContainer}>
-          <Text style={[styles.sectionTitle, isDarkTheme && styles.textDark]}>{title}</Text>
-          <Text style={[styles.deviceCount, isDarkTheme && styles.textSecondaryDark]}>
+          <Text style={styles.sectionTitle}>{title}</Text>
+          <Text style={styles.deviceCount}>
             {devices.length} device{devices.length !== 1 ? 's' : ''}
           </Text>
         </View>
@@ -203,9 +283,9 @@ const SettingsScreen: React.FC = () => {
   const renderSingleDeviceSection = (title: string, device: SensorDevice | null, deviceType: keyof StoredDevices) => {
     if (!device) return null;
     return (
-      <View style={[styles.section, isDarkTheme && styles.sectionDark]}>
+      <View style={styles.section}>
         <TouchableOpacity style={styles.sectionHeader} onPress={() => toggleSection(deviceType)} activeOpacity={0.7}>
-          <Text style={[styles.sectionTitle, isDarkTheme && styles.textDark]}>{title}</Text>
+          <Text style={styles.sectionTitle}>{title}</Text>
           <Ionicons
             name={collapsedSections[deviceType] ? "chevron-down" : "chevron-up"}
             size={20}
@@ -253,50 +333,50 @@ const SettingsScreen: React.FC = () => {
 
   if (loading) {
     return (
-      <View style={[styles.loadingContainer, isDarkTheme && styles.loadingContainerDark]}>
-        <Text style={isDarkTheme && styles.textDark}>Loading settings...</Text>
+      <View style={styles.loadingContainer}>
+        <Text style={{color: colors.text}}>Loading settings...</Text>
       </View>
     );
   }
 
   if (!devices) {
     return (
-      <View style={[styles.loadingContainer, isDarkTheme && styles.loadingContainerDark]}>
-        <Text style={isDarkTheme && styles.textDark}>Failed to load settings</Text>
+      <View style={styles.loadingContainer}>
+        <Text style={{color: colors.text}}>Failed to load settings</Text>
       </View>
     );
   }
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, isDarkTheme && styles.containerDark]}
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <SettingsHeader />
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Quick Actions */}
-        <View style={[styles.header, isDarkTheme && styles.headerDark]}>
+        <View style={styles.header}>
           <View style={styles.quickActions}>
             <TouchableOpacity
-              style={[styles.quickActionButton, isDarkTheme && styles.quickActionButtonDark]}
+              style={styles.quickActionButton}
               onPress={expandAllSections}
             >
-              <Ionicons name="expand-outline" size={16} color={isDarkTheme ? "#fff" : "#007AFF"} />
-              <Text style={[styles.quickActionText, isDarkTheme && styles.textDark]}>Expand All</Text>
+              <Ionicons name="expand-outline" size={16} color={colors.primary} />
+              <Text style={styles.quickActionText}>Expand All</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.quickActionButton, isDarkTheme && styles.quickActionButtonDark]}
+              style={styles.quickActionButton}
               onPress={collapseAllSections}
             >
-              <Ionicons name="contract-outline" size={16} color={isDarkTheme ? "#fff" : "#007AFF"} />
-              <Text style={[styles.quickActionText, isDarkTheme && styles.textDark]}>Collapse All</Text>
+              <Ionicons name="contract-outline" size={16} color={colors.primary} />
+              <Text style={styles.quickActionText}>Collapse All</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.quickActionButton, isDarkTheme && styles.quickActionButtonDark]}
+              style={styles.quickActionButton}
               onPress={() => setHaConfigModalVisible(true)}
             >
-              <Ionicons name="settings-outline" size={16} color={isDarkTheme ? "#fff" : "#007AFF"} />
-              <Text style={[styles.quickActionText, isDarkTheme && styles.textDark]}>HA Config</Text>
+              <Ionicons name="settings-outline" size={16} color={colors.primary} />
+              <Text style={styles.quickActionText}>HA Config</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -313,7 +393,7 @@ const SettingsScreen: React.FC = () => {
 
         {/* Save Button */}
         <TouchableOpacity
-          style={[styles.saveButton, isDarkTheme && styles.saveButtonDark]}
+          style={styles.saveButton}
           onPress={saveAllSettings}
           activeOpacity={0.8}
         >
@@ -332,90 +412,5 @@ const SettingsScreen: React.FC = () => {
     </KeyboardAvoidingView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  containerDark: { backgroundColor: '#121212' },
-  scrollView: { flex: 1 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f5f5' },
-  loadingContainerDark: { backgroundColor: '#121212' },
-  header: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  headerDark: { backgroundColor: '#1e1e1e' },
-  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#333', flex: 1 },
-  subtitle: { fontSize: 16, color: '#666', marginBottom: 12 },
-  themeContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  quickActions: { flexDirection: 'row', gap: 12 },
-  quickActionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-  },
-  quickActionButtonDark: { backgroundColor: '#2a2a2a' },
-  quickActionText: { fontSize: 14, color: '#007AFF', fontWeight: '500' },
-  section: {
-    backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginBottom: 12,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-    overflow: 'hidden',
-  },
-  sectionDark: { backgroundColor: '#1e1e1e' },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
-  sectionTitleContainer: { flex: 1 },
-  sectionTitle: { fontSize: 18, fontWeight: '600', color: '#333' },
-  deviceCount: { fontSize: 14, color: '#666', marginTop: 2 },
-  devicesList: { paddingHorizontal: 16, paddingBottom: 16 },
-  deviceContainer: { marginBottom: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-  deviceContainerDark: { borderBottomColor: '#2a2a2a' },
-  deviceLabel: { fontSize: 14, fontWeight: '500', marginBottom: 8, color: '#555' },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    fontSize: 16,
-    backgroundColor: '#fafafa',
-  },
-  inputDark: { borderColor: '#333', backgroundColor: '#2a2a2a', color: '#fff' },
-  saveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#007AFF',
-    marginHorizontal: 16,
-    marginTop: 20,
-    marginBottom: 20,
-    padding: 16,
-    borderRadius: 12,
-  },
-  saveButtonDark: { backgroundColor: '#1565C0' },
-  saveButtonText: { color: '#fff', fontSize: 18, fontWeight: '600' },
-  bottomSpacer: { height: 20 },
-  textDark: { color: '#fff' },
-  textSecondaryDark: { color: '#aaa' },
-});
 
 export default SettingsScreen;

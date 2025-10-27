@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { getColors } from '@/constants/colors';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 
@@ -36,6 +37,7 @@ const INDIGO = {
 export default function LoginScreen() {
   const { login } = useAuth();
   const { isDark, setTheme } = useTheme();
+  const colors = getColors(isDark);
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
@@ -104,7 +106,7 @@ export default function LoginScreen() {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: isDark ? '#121212' : '#f5f5f5',
+      backgroundColor: colors.background,
     },
     logoTopContainer: {
       position: 'absolute',
@@ -139,13 +141,13 @@ export default function LoginScreen() {
     title: {
       fontSize: 32,
       fontWeight: 'bold',
-      color: isDark ? '#fff' : '#333',
+      color: colors.text,
       textAlign: 'center',
       marginBottom: 8,
     },
     subtitle: {
       fontSize: 16,
-      color: isDark ? '#aaa' : '#666',
+      color: colors.textSecondary,
       textAlign: 'center',
       marginBottom: 48,
     },
@@ -159,7 +161,7 @@ export default function LoginScreen() {
       flexDirection: 'row',
     },
     dash: {
-      color: isDark ? '#aaa' : '#666',
+      color: colors.textSecondary,
       fontSize: 24,
       fontWeight: 'bold',
       marginHorizontal: 16,
@@ -170,14 +172,14 @@ export default function LoginScreen() {
       height: 60,
       marginHorizontal: 4,
       borderWidth: 2,
-      borderColor: isDark ? '#333' : '#ddd',
+      borderColor: colors.border,
       borderRadius: 12,
       fontSize: 24,
       fontWeight: 'bold',
       textAlign: 'center',
-      color: isDark ? '#fff' : '#333',
-      backgroundColor: isDark ? '#2a2a2a' : '#fafafa',
-      shadowColor: 'rgba(0,0,0,0.05)',
+      color: colors.text,
+      backgroundColor: colors.surfaceSecondary,
+      shadowColor: colors.shadow,
       shadowOpacity: 0.1,
       shadowOffset: { width: 0, height: 1 },
       shadowRadius: 2,
@@ -189,7 +191,7 @@ export default function LoginScreen() {
     },
     codeInputFilled: {
       borderColor: INDIGO[500],
-      backgroundColor: isDark ? '#2a2a2a' : '#fafafa',
+      backgroundColor: colors.surfaceSecondary,
     },
     loginButton: {
       backgroundColor: INDIGO[600],
@@ -215,14 +217,14 @@ export default function LoginScreen() {
     },
     helpText: {
       fontSize: 14,
-      color: isDark ? '#aaa' : '#666',
+      color: colors.textSecondary,
       textAlign: 'center',
       lineHeight: 20,
     },
     themeToggle: {
       padding: 8,
       borderRadius: 8,
-      backgroundColor: isDark ? '#2a2a2a' : '#f0f0f0',
+      backgroundColor: colors.surfaceSecondary,
     },
   });
 
