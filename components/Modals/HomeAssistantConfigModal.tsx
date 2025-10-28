@@ -25,7 +25,8 @@ const HomeAssistantConfigModal: React.FC<HomeAssistantConfigModalProps> = ({
   onClose,
 }) => {
   const { theme, setTheme } = useTheme();
-  const isDarkTheme = theme === 'dark' || (theme === 'system' && useColorScheme() === 'dark');
+  const systemColorScheme = useColorScheme();
+  const isDarkTheme = theme === 'dark' || (theme === 'system' && systemColorScheme === 'dark');
   const colors = getColors(isDarkTheme);
   
   // Configuration fields

@@ -1,13 +1,13 @@
 import { useTheme } from '@/context/ThemeContext';
 import React from 'react';
 import {
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { BinarySensorData, SensorDevice } from '../../../types';
 
@@ -123,11 +123,17 @@ const SensorDetailsModal: React.FC<SensorDetailsModalProps> = ({
           {/* Current Status */}
           <View style={[styles.section, isDark && styles.sectionDark]}>
             <Text style={[styles.sectionTitle, isDark && styles.textDark]}>Current Status</Text>
-            <View style={[styles.statusContainer, isIssue && styles.statusContainerIssue]}>
+            <View style={[
+              styles.statusContainer, 
+              isDark && styles.statusContainerDark,
+              isIssue && styles.statusContainerIssue,
+              isDark && isIssue && styles.statusContainerIssueDark
+            ]}>
               <Text style={[
                 styles.statusText, 
                 isDark && styles.textDark,
-                isIssue && styles.statusTextIssue
+                isIssue && styles.statusTextIssue,
+                isDark && isIssue && styles.statusTextIssueDark
               ]}>
                 {status}
               </Text>
@@ -312,8 +318,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
     borderRadius: 8,
   },
+  statusContainerDark: {
+    backgroundColor: '#2d2d2d',
+  },
   statusContainerIssue: {
     backgroundColor: '#ffebee',
+  },
+  statusContainerIssueDark: {
+    backgroundColor: '#3a1f1f',
   },
   statusText: {
     fontSize: 16,
@@ -322,6 +334,9 @@ const styles = StyleSheet.create({
   },
   statusTextIssue: {
     color: '#d32f2f',
+  },
+  statusTextIssueDark: {
+    color: '#ff5252',
   },
   statusIndicator: {
     width: 12,

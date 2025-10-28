@@ -1,16 +1,28 @@
-import { AcCard, AcSettingsModal, CameraCard, DeviceSection, LightCard, SensorDetailsModal, SensorStatusPanel } from '@/components';
+import {
+  AcCard,
+  AcSettingsModal,
+  CameraCard,
+  DeviceSection,
+  LightCard,
+  SensorDetailsModal,
+  SensorStatusPanel
+} from '@/components';
 import DashboardHeader from '@/components/ui/DashboardHeader';
 import TempHumidityDetailsModal from '@/components/ui/TempHumidityDetailsModal';
 import { getColors } from '@/constants/colors';
 import { useTheme } from '@/context/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
+import { BlurView } from 'expo-blur';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
+  AppState,
+  AppStateStatus,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
   useColorScheme,
   useWindowDimensions
@@ -20,21 +32,20 @@ import { deviceStorageService } from '../services/DeviceStorageService';
 import { HomeAssistantData, homeAssistantService } from '../services/HomeAssistantService';
 import { ensureCorrectCameraConfig } from '../utils/configurationFixer';
 
-// Import components
-
 const CONTAINER_PADDING = 4;
 const CARD_GAP = 12;
 
 const DashboardScreen: React.FC = () => {
-  const { width: SCREEN_WIDTH } = useWindowDimensions();
-  const { theme, setTheme } = useTheme();
-  const isDarkTheme = theme === 'dark' || (theme === 'system' && useColorScheme() === 'dark');
+  const { width: SCREEN_WIDTH = 400 } = useWindowDimensions();
+  const { theme } = useTheme();
+  const systemColorScheme = useColorScheme();
+  const isDarkTheme = theme === 'dark' || (theme === 'system' && systemColorScheme === 'dark');
   const colors = getColors(isDarkTheme);
+
   const [configuredDevices, setConfiguredDevices] = useState<SensorDevice[]>([]);
+  const [cameraDevices, setCameraDevices] = useState<SensorDevice[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  
-  // Home Assistant data state
   const [haData, setHaData] = useState<HomeAssistantData>({
     binarySensorData: {},
     climateData: {},
@@ -42,7 +53,9 @@ const DashboardScreen: React.FC = () => {
     sensorData: {}
   });
   const [isConnected, setIsConnected] = useState(false);
-  
+  const [showReloadButton, setShowReloadButton] = useState(false);
+
+  // Modals
   const [acModalVisible, setAcModalVisible] = useState(false);
   const [selectedAc, setSelectedAc] = useState<SensorDevice | null>(null);
   const [tempHumidityModalVisible, setTempHumidityModalVisible] = useState(false);
@@ -52,165 +65,127 @@ const DashboardScreen: React.FC = () => {
   const [avgTemperature, setAvgTemperature] = useState<number>(0);
   const [avgHumidity, setAvgHumidity] = useState<number>(0);
 
-  // Connect to HomeAssistant WebSocket service
+  const [appState, setAppState] = useState<AppStateStatus>(AppState.currentState);
+
+  // Detect when app returns to foreground
   useEffect(() => {
-    // Subscribe to data updates
+    const sub = AppState.addEventListener('change', nextState => {
+      if (appState.match(/inactive|background/) && nextState === 'active') {
+        // When returning to foreground, show reload button
+        setShowReloadButton(true);
+      }
+      setAppState(nextState);
+    });
+    return () => sub.remove();
+  }, [appState]);
+
+  // Subscribe to Home Assistant
+  useEffect(() => {
     const unsubscribe = homeAssistantService.subscribe((data: HomeAssistantData) => {
       setHaData(data);
-      
-      // Update connection status
       setIsConnected(homeAssistantService.isConnected());
     });
-
-    // Only connect if not already connected
     if (!homeAssistantService.isConnected()) {
-      homeAssistantService.connectWebSocket().catch(error => {
-        console.error('Failed to connect WebSocket:', error);
-      });
-    } else {
-      setIsConnected(true);
-    }
-    
-    return () => {
-      unsubscribe();
-    };
+      homeAssistantService.connectWebSocket().catch(console.error);
+    } else setIsConnected(true);
+    return () => unsubscribe();
   }, []);
 
-  // Check connection status periodically
-  React.useEffect(() => {
-    const connectionCheck = setInterval(() => {
+  useEffect(() => {
+    const interval = setInterval(() => {
       setIsConnected(homeAssistantService.isConnected());
-    }, 5000); // Check every 5 seconds
-    
-    return () => clearInterval(connectionCheck);
+    }, 5000);
+    return () => clearInterval(interval);
   }, []);
 
-  // Calculate responsive card widths based on current screen dimensions
-  const getCardWidth = (itemsPerRow: number) => {
-    // For the right column, we need to account for the reduced width
-    const rightColumnWidth = SCREEN_WIDTH * 0.5;
-    const totalGap = CARD_GAP * (itemsPerRow - 1);
-    const availableWidth = rightColumnWidth - (CONTAINER_PADDING * 2) - totalGap - 6; // 6px for paddingLeft
-    return availableWidth / itemsPerRow;
-  };
-
-  // Load theme preference and devices when screen comes into focus
+  // Load devices when screen is focused
   useFocusEffect(
     useCallback(() => {
       loadConfiguredDevices();
-      // loadEntityData(); // Removed - now using WebSocket data
     }, [])
   );
 
-  // Calculate averages whenever sensor data changes
-  React.useEffect(() => {
+  useEffect(() => {
     calculateAverages();
   }, [haData.sensorData, configuredDevices]);
 
-  const calculateAverages = () => {
-    const tempHumidityDevices = configuredDevices.filter(device => device.type === 'temp_humidity');
-    
-    if (tempHumidityDevices.length === 0) {
-      setAvgTemperature(0);
-      setAvgHumidity(0);
-      return;
-    }
-
-    let totalTemp = 0;
-    let totalHumidity = 0;
-    let tempCount = 0;
-    let humidityCount = 0;
-
-    tempHumidityDevices.forEach(device => {
-      const deviceData = getDeviceData(device);
-      if (deviceData.type === 'sensor' && deviceData.data) {
-        const data = deviceData.data as SensorData;
-        const value = parseFloat(data.new_state);
-        
-        if (!isNaN(value)) {
-          if (device.entity.includes('temperature') || device.entity.includes('temp')) {
-            totalTemp += value;
-            tempCount++;
-          } else if (device.entity.includes('humidity')) {
-            totalHumidity += value;
-            humidityCount++;
-          }
-        }
-      }
-    });
-
-    setAvgTemperature(tempCount > 0 ? totalTemp / tempCount : 0);
-    setAvgHumidity(humidityCount > 0 ? totalHumidity / humidityCount : 0);
-  };
-
-
+  // === LOADERS ===
 
   const loadConfiguredDevices = async () => {
     try {
       setLoading(true);
-      
-      // Fix camera configuration if needed (one-time fix)
-      const wasFixed = await ensureCorrectCameraConfig();
-      
-      // Ensure radar sensors count is correct (migration helper)
+      await ensureCorrectCameraConfig();
       await deviceStorageService.ensureRadarSensorsCount();
-      
-      // Use getAllDevices to show all devices, including those without entities
       const devices = await deviceStorageService.getAllDevices();
       setConfiguredDevices(devices);
-      
-      // Initialize HomeAssistant service with only configured devices (those with entities) for API loading
+      setCameraDevices(devices.filter(d => d.type === 'camera'));
       const configuredOnly = await deviceStorageService.getConfiguredDevices();
-      
       await homeAssistantService.initializeWithConfiguredDevices(configuredOnly);
-      
     } catch (error) {
-      console.error('❌ Error in loadConfiguredDevices:', error);
+      console.error('❌ loadConfiguredDevices error:', error);
       Alert.alert('Error', 'Failed to load configured devices');
     } finally {
       setLoading(false);
     }
   };
 
+  const loadCameraDevices = async () => {
+    try {
+      const devices = await deviceStorageService.getAllDevices();
+      setCameraDevices(devices.filter(d => d.type === 'camera'));
+    } catch (err) {
+      console.error('Reload cameras error:', err);
+    }
+  };
 
+  // === HELPERS ===
 
-  // Helper function to get data for a specific device
+  const calculateAverages = () => {
+    const tempHumidityDevices = configuredDevices?.filter(d => d.type === 'temp_humidity') || [];
+    if (!tempHumidityDevices.length) {
+      setAvgTemperature(0);
+      setAvgHumidity(0);
+      return;
+    }
+
+    let tSum = 0, hSum = 0, tCount = 0, hCount = 0;
+    tempHumidityDevices.forEach(d => {
+      const dd = getDeviceData(d);
+      if (dd.type === 'sensor' && dd.data) {
+        const data = dd.data as SensorData;
+        const val = parseFloat(data.new_state);
+        if (!isNaN(val)) {
+          if (d.entity.includes('temp')) { tSum += val; tCount++; }
+          if (d.entity.includes('humidity')) { hSum += val; hCount++; }
+        }
+      }
+    });
+    setAvgTemperature(tCount ? tSum / tCount : 0);
+    setAvgHumidity(hCount ? hSum / hCount : 0);
+  };
+
   const getDeviceData = (device: SensorDevice) => {
-    const entityId = device.entity;
-    
-    // First check binary sensors directly
-    if (haData.binarySensorData[entityId]) {
-      return { type: 'binary', data: haData.binarySensorData[entityId] };
-    }
-    
-    // Check climate (AC)
-    if (haData.climateData[entityId]) {
-      return { type: 'climate', data: haData.climateData[entityId] };
-    }
-    
-    // Check lights
-    if (haData.lightData[entityId]) {
-      return { type: 'light', data: haData.lightData[entityId] };
-    }
-    
-    // Check sensors
-    if (haData.sensorData[entityId]) {
-      return { type: 'sensor', data: haData.sensorData[entityId] };
-    }
-    
+    const e = device.entity;
+    if (haData.binarySensorData[e]) return { type: 'binary', data: haData.binarySensorData[e] };
+    if (haData.climateData[e]) return { type: 'climate', data: haData.climateData[e] };
+    if (haData.lightData[e]) return { type: 'light', data: haData.lightData[e] };
+    if (haData.sensorData[e]) return { type: 'sensor', data: haData.sensorData[e] };
     return { type: 'unknown', data: null };
   };
 
-  const toggleDevice = async (deviceId: string, deviceType: string, entityId: string) => {
+  const toggleDevice = async (_id: string, _type: string, entityId: string) => {
     try {
-      // Use the HomeAssistant service to toggle the entity
       homeAssistantService.toggleEntity(entityId);
-      
-      // The state will be updated automatically through the WebSocket subscription
-    } catch (error) {
-      console.error('Toggle error:', error);
+    } catch (err) {
       Alert.alert('Error', 'Failed to toggle device');
     }
+  };
+
+  const getCardWidth = (items: number) => {
+    const rW = SCREEN_WIDTH * 0.5;
+    const totalGap = CARD_GAP * (items - 1);
+    const available = rW - CONTAINER_PADDING * 2 - totalGap - 6;
+    return available / items;
   };
 
   const openAcSettings = (ac: SensorDevice) => {
@@ -223,8 +198,8 @@ const DashboardScreen: React.FC = () => {
     setSelectedAc(null);
   };
 
-  const handleSensorPress = (sensor: SensorDevice, data: BinarySensorData | null) => {
-    setSelectedSensor(sensor);
+  const handleSensorPress = (s: SensorDevice, data: BinarySensorData | null) => {
+    setSelectedSensor(s);
     setSelectedSensorData(data);
     setSensorDetailsModalVisible(true);
   };
@@ -238,106 +213,10 @@ const DashboardScreen: React.FC = () => {
   const onRefresh = async () => {
     setRefreshing(true);
     await loadConfiguredDevices();
-    // Entity data is now updated through WebSocket
     setRefreshing(false);
   };
 
-  const getBinarySensorState = (device: SensorDevice): { isActive: boolean; stateText: string } => {
-    // If device has no entity configured, show "Not Configured"
-    if (!device.entity || device.entity.trim() === '') {
-      return { isActive: false, stateText: 'Not Configured' };
-    }
-
-    const deviceData = getDeviceData(device);
-    
-    // Check if we have binary sensor data
-    if (deviceData.type === 'binary' && deviceData.data) {
-      const binaryData = deviceData.data as BinarySensorData;
-      const isActive = binaryData.new_state === 'on';
-      
-      // Determine state text based on device type and state
-      switch (device.type) {
-        case 'water':
-          return { 
-            isActive, 
-            stateText: isActive ? 'Water Detected' : 'No Water' 
-          };
-        case 'radar':
-          return { 
-            isActive, 
-            stateText: isActive ? 'Motion Detected' : 'No Motion' 
-          };
-        case 'door':
-          return { 
-            isActive, 
-            stateText: isActive ? 'Open' : 'Closed' 
-          };
-        case 'security':
-          return { 
-            isActive, 
-            stateText: isActive ? 'Alert' : 'Secure' 
-          };
-        default:
-          return { 
-            isActive, 
-            stateText: isActive ? 'Active' : 'Inactive' 
-          };
-      }
-    }
-    
-    // If no data found, check if we have any data in the haData.binarySensorData object directly
-    const directData = haData.binarySensorData[device.entity];
-    if (directData) {
-      const isActive = directData.new_state === 'on';
-      switch (device.type) {
-        case 'water':
-          return { 
-            isActive, 
-            stateText: isActive ? 'Water Detected' : 'No Water' 
-          };
-        case 'radar':
-          return { 
-            isActive, 
-            stateText: isActive ? 'Motion Detected' : 'No Motion' 
-          };
-        case 'door':
-          return { 
-            isActive, 
-            stateText: isActive ? 'Open' : 'Closed' 
-          };
-        case 'security':
-          return { 
-            isActive, 
-            stateText: isActive ? 'Alert' : 'Secure' 
-          };
-        default:
-          return { 
-            isActive, 
-            stateText: isActive ? 'Active' : 'Inactive' 
-          };
-      }
-    }
-    
-    return { isActive: false, stateText: 'No Data' };
-  };
-
-
-
-  // Helper function to get section configuration
-  const getSectionConfig = (type: string) => {
-    const configs: { [key: string]: { title: string; icon: string } } = {
-      'temp_humidity': { title: 'Temperature & Humidity', icon: '🌡️' },
-      'light': { title: 'Lights Control', icon: '💡' },
-      'ac': { title: 'Air Conditioners', icon: '❄️' },
-      'water': { title: 'Water Sensors', icon: '💧' },
-      'radar': { title: 'Radar Sensors', icon: '📡' },
-      'door': { title: 'Door Sensors', icon: '🚪' },
-      'security': { title: 'Security Systems', icon: '🔒' },
-      'camera': { title: 'Cameras', icon: '📹' }
-    };
-    
-    return configs[type] || { title: 'Other Sensors', icon: '📊' };
-  };
+  // === UI ===
 
   if (loading) {
     return (
@@ -355,22 +234,30 @@ const DashboardScreen: React.FC = () => {
         onTempHumidityDetailsPress={() => setTempHumidityModalVisible(true)}
       />
 
-      {configuredDevices.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>📱</Text>
-          <Text style={[styles.emptyTitle, isDarkTheme && styles.textDark]}>No Devices Configured</Text>
-          <Text style={[styles.emptyMessage, isDarkTheme && styles.textSecondaryDark]}>
-            Go to Settings to configure your sensors and devices with their entity IDs.
-          </Text>
-        </View>
-      ) : (
-        <View style={styles.mainContent}>
-          {/* Left Half - Cameras */}
-          <View style={styles.leftColumn}>
+      <View style={styles.mainContent}>
+        {/* LEFT COLUMN (CAMERAS) */}
+        <View style={styles.leftColumn}>
+          {showReloadButton ? (
+            // 🔄 When reload button should show
+            <BlurView intensity={70} tint={isDarkTheme ? 'dark' : 'light'} style={styles.blurContainer}>
+              <View style={styles.reloadContainer}>
+                <TouchableOpacity
+                  style={styles.reloadButton}
+                  onPress={async () => {
+                    await loadCameraDevices();
+                    setShowReloadButton(false);
+                  }}
+                >
+                  <Text style={styles.reloadButtonText}>🔄 Reload Cameras</Text>
+                </TouchableOpacity>
+              </View>
+            </BlurView>
+          ) : (
+            // Normal camera display
             <ScrollView
               refreshControl={
-                <RefreshControl 
-                  refreshing={refreshing} 
+                <RefreshControl
+                  refreshing={refreshing}
                   onRefresh={onRefresh}
                   tintColor={colors.primary}
                   colors={[colors.primary]}
@@ -379,229 +266,117 @@ const DashboardScreen: React.FC = () => {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.scrollContent}
             >
-              {(() => {
-                const cameraDevices = configuredDevices.filter(device => device.type === 'camera');
-                
-                if (cameraDevices.length === 0) {
-                  return (
-                    <View style={styles.emptyColumnContainer}>
-                      <Text style={styles.emptyColumnIcon}>📹</Text>
-                      <Text style={[styles.emptyColumnTitle, isDarkTheme && styles.textDark]}>No Cameras</Text>
-                      <Text style={[styles.emptyColumnMessage, isDarkTheme && styles.textSecondaryDark]}>
-                        Configure cameras in Settings
-                      </Text>
-                    </View>
-                  );
-                }
-                
-                return (
-                  <View style={styles.camerasList}>
-                    {cameraDevices.map(camera => {
-                      let motionSensor = null;
-                      let occupancySensor = null;
-                      
-                      if (camera.motion_sensor) {
-                        motionSensor = haData.binarySensorData[camera.motion_sensor];
-                      }
-                      
-                      if (camera.occupancy_sensor) {
-                        occupancySensor = haData.binarySensorData[camera.occupancy_sensor];
-                      }
-                      
-                      const cameraWithSensors = {
-                        ...camera,
-                        motion_sensor_detected: motionSensor ? motionSensor.new_state === 'on' : false,
-                        occupancy_sensor_detected: occupancySensor ? occupancySensor.new_state === 'on' : false,
-                        motion_sensor_entity: camera.motion_sensor,
-                        occupancy_sensor_entity: camera.occupancy_sensor
-                      };
-                      
-                      return (
-                        <View key={camera.id} style={styles.cameraCardItem}>
-                          <CameraCard
-                            camera={cameraWithSensors}
-                            cardWidth={SCREEN_WIDTH * 0.5 - CONTAINER_PADDING - 12}
-                          />
-                        </View>
-                      );
-                    })}
-                  </View>
-                );
-              })()}
-            </ScrollView>
-          </View>
-
-          {/* Right Half - Controls and Sensors */}
-          <View style={styles.rightColumn}>
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.scrollContent}
-            >
-              {/* Lights Section */}
-              {(() => {
-                const lightDevices = configuredDevices.filter(device => device.type === 'light');
-                
-                if (lightDevices.length === 0) return null;
-                
-                return (
-                  <DeviceSection
-                    title="Lights"
-                    devices={lightDevices}
-                    icon="💡"
-                    itemsPerRow={2}
-                  >
-                    {lightDevices.map(device => {
-                      const deviceData = getDeviceData(device);
-                      const isOn = deviceData.type === 'light' && deviceData.data ? 
-                        (deviceData.data as LightData).new_state === 'on' : false;
-                      
-                      return (
-                        <LightCard
-                          key={device.id}
-                          device={device}
-                          isOn={isOn}
-                          onToggle={toggleDevice}
-                          cardWidth={getCardWidth(2)}
+              {cameraDevices.length === 0 ? (
+                <View style={styles.emptyColumnContainer}>
+                  <Text style={styles.emptyColumnIcon}>📹</Text>
+                  <Text style={[styles.emptyColumnTitle, isDarkTheme && styles.textDark]}>No Cameras</Text>
+                  <Text style={[styles.emptyColumnMessage, isDarkTheme && styles.textSecondaryDark]}>
+                    Configure cameras in Settings
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.camerasList}>
+                  {cameraDevices.map(camera => {
+                    const motion = haData.binarySensorData[camera.motion_sensor || ''];
+                    const occupancy = haData.binarySensorData[camera.occupancy_sensor || ''];
+                    const cam = {
+                      ...camera,
+                      motion_sensor_detected: motion ? motion.new_state === 'on' : false,
+                      occupancy_sensor_detected: occupancy ? occupancy.new_state === 'on' : false,
+                    };
+                    return (
+                      <View key={camera.id} style={styles.cameraCardItem}>
+                        <CameraCard
+                          camera={cam}
+                          cardWidth={SCREEN_WIDTH * 0.5 - CONTAINER_PADDING - 12}
                         />
-                      );
-                    })}
-                  </DeviceSection>
-                );
-              })()}
-
-              {/* Air Conditioners Section */}
-              {(() => {
-                const acDevices = configuredDevices.filter(device => device.type === 'ac');
-                
-                if (acDevices.length === 0) return null;
-                
-                return (
-                  <DeviceSection
-                    title="Air Conditioners"
-                    devices={acDevices}
-                    icon="❄️"
-                    itemsPerRow={2}
-                  >
-                    {acDevices.map(device => {
-                      const deviceData = getDeviceData(device);
-                      const isOn = deviceData.type === 'climate' && deviceData.data ? 
-                        (deviceData.data as ClimateData).new_state !== 'off' : false;
-                      const acData = deviceData.type === 'climate' ? deviceData.data as ClimateData : null;
-                      
-                      return (
-                        <AcCard
-                          key={device.id}
-                          device={device}
-                          isOn={isOn}
-                          acData={acData}
-                          onToggle={toggleDevice}
-                          onOpenSettings={openAcSettings}
-                          cardWidth={getCardWidth(2)}
-                        />
-                      );
-                    })}
-                  </DeviceSection>
-                );
-              })()}
-
-              {/* Sensor Status Panel */}
-              {(() => {
-                const binarySensorDevices = configuredDevices.filter(device => 
-                  ['water', 'radar', 'door', 'security'].includes(device.type)
-                );
-                
-                if (binarySensorDevices.length === 0) return null;
-                
-                return (
-                  <View style={styles.sensorsContainer}>
-                    <SensorStatusPanel
-                      sensors={binarySensorDevices}
-                      binarySensorData={haData.binarySensorData}
-                      onSensorPress={handleSensorPress}
-                    />
-                  </View>
-                );
-              })()}
-
-              {/* Other Sensors */}
-              {(() => {
-                const devices = configuredDevices.filter(device => 
-                  !['temp_humidity', 'light', 'ac', 'water', 'radar', 'door', 'security', 'camera'].includes(device.type)
-                );
-                if (devices.length === 0) return null;
-                
-                return (
-                  <DeviceSection
-                    title="Other Sensors"
-                    devices={devices}
-                    icon="📊"
-                    itemsPerRow={2}
-                  >
-                    {devices.map(device => {
-                      const deviceData = getDeviceData(device);
-                      const cardWidth = getCardWidth(2);
-                      
-                      return (
-                        <View key={device.id} style={[styles.card, { width: cardWidth }]}>
-                          <View style={[styles.deviceCard, isDarkTheme && styles.deviceCardDark]}>
-                            <View style={styles.deviceHeader}>
-                              <View style={[
-                                styles.deviceIconContainer,
-                                { backgroundColor: colors.surfaceSecondary }
-                              ]}>
-                                <Text style={styles.deviceIcon}>📱</Text>
-                              </View>
-                              <View style={styles.deviceInfo}>
-                                <Text style={[styles.deviceName, { color: colors.text }]} numberOfLines={1}>
-                                  {device.name}
-                                </Text>
-                                <Text style={[styles.deviceType, isDarkTheme && styles.textSecondaryDark]} numberOfLines={1}>
-                                  {device.type}
-                                </Text>
-                              </View>
-                            </View>
-                            
-                            {deviceData.type === 'sensor' && deviceData.data && (
-                              <View style={styles.sensorValueContainer}>
-                                <Text style={[
-                                  styles.sensorValue,
-                                  { color: isDarkTheme ? '#fff' : '#333' }
-                                ]}>
-                                  {(deviceData.data as SensorData).new_state}
-                                  <Text style={styles.sensorUnit}>
-                                    {(deviceData.data as SensorData).attributes.unit_of_measurement}
-                                  </Text>
-                                </Text>
-                              </View>
-                            )}
-                          </View>
-                        </View>
-                      );
-                    })}
-                  </DeviceSection>
-                );
-              })()}
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
             </ScrollView>
-          </View>
+          )}
         </View>
-      )}
+
+        {/* RIGHT COLUMN */}
+        <View style={styles.rightColumn}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            {/* Lights */}
+            {(() => {
+              const lights = configuredDevices.filter(d => d.type === 'light');
+              if (!lights.length) return null;
+              return (
+                <DeviceSection title="Lights" devices={lights} icon="💡" itemsPerRow={2}>
+                  {lights.map(l => {
+                    const data = getDeviceData(l);
+                    const isOn = data.type === 'light' && data.data ? (data.data as LightData).new_state === 'on' : false;
+                    return (
+                      <LightCard
+                        key={l.id}
+                        device={l}
+                        isOn={isOn}
+                        onToggle={toggleDevice}
+                        cardWidth={getCardWidth(2)}
+                      />
+                    );
+                  })}
+                </DeviceSection>
+              );
+            })()}
+
+            {/* AC */}
+            {(() => {
+              const acs = configuredDevices.filter(d => d.type === 'ac');
+              if (!acs.length) return null;
+              return (
+                <DeviceSection title="Air Conditioners" devices={acs} icon="❄️" itemsPerRow={2}>
+                  {acs.map(ac => {
+                    const data = getDeviceData(ac);
+                    const isOn = data.type === 'climate' && data.data ? (data.data as ClimateData).new_state !== 'off' : false;
+                    const acData = data.type === 'climate' ? (data.data as ClimateData) : null;
+                    return (
+                      <AcCard
+                        key={ac.id}
+                        device={ac}
+                        isOn={isOn}
+                        acData={acData}
+                        onToggle={toggleDevice}
+                        onOpenSettings={openAcSettings}
+                        cardWidth={getCardWidth(2)}
+                      />
+                    );
+                  })}
+                </DeviceSection>
+              );
+            })()}
+
+            {/* Sensors */}
+            {(() => {
+              const binary = configuredDevices.filter(d => ['water', 'radar', 'door', 'security'].includes(d.type));
+              if (!binary.length) return null;
+              return (
+                <View style={styles.sensorsContainer}>
+                  <SensorStatusPanel
+                    sensors={binary}
+                    binarySensorData={haData.binarySensorData}
+                    onSensorPress={handleSensorPress}
+                  />
+                </View>
+              );
+            })()}
+          </ScrollView>
+        </View>
+      </View>
 
       {/* Modals */}
-      <AcSettingsModal
-        visible={acModalVisible}
-        selectedAc={selectedAc}
-        onClose={closeAcSettings}
-      />
-
-      {/* Temperature & Humidity Details Modal */}
+      <AcSettingsModal visible={acModalVisible} selectedAc={selectedAc} onClose={closeAcSettings} />
       <TempHumidityDetailsModal
         visible={tempHumidityModalVisible}
-        tempHumidityDevices={configuredDevices.filter(device => device.type === 'temp_humidity')}
+        tempHumidityDevices={configuredDevices.filter(d => d.type === 'temp_humidity')}
         sensorData={haData.sensorData}
         onClose={() => setTempHumidityModalVisible(false)}
       />
-
-      {/* Sensor Details Modal */}
       <SensorDetailsModal
         visible={sensorDetailsModalVisible}
         sensor={selectedSensor}
@@ -613,206 +388,46 @@ const DashboardScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  containerDark: {
-    backgroundColor: '#121212',
-  },
-  mainContent: {
-    flex: 1,
-    flexDirection: 'row',
-  },
-  leftColumn: {
-    flex: 1,
-    paddingRight: 6,
-  },
-  rightColumn: {
-    flex: 1,
-    paddingLeft: 6,
-  },
-  camerasList: {
-    paddingHorizontal: CONTAINER_PADDING,
-    paddingVertical: 8,
-  },
-  cameraCardItem: {
-    marginBottom: 10,
-  },
-  emptyColumnContainer: {
-    flex: 1,
+  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  containerDark: { backgroundColor: '#121212' },
+  mainContent: { flex: 1, flexDirection: 'row' },
+  leftColumn: { flex: 1, paddingRight: 6 },
+  rightColumn: { flex: 1, paddingLeft: 6 },
+  blurContainer: {
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
   },
-  emptyColumnIcon: {
-    fontSize: 40,
-    marginBottom: 12,
-  },
-  emptyColumnTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 6,
-    textAlign: 'center',
-  },
-  emptyColumnMessage: {
-    fontSize: 13,
-    color: '#666',
-    textAlign: 'center',
-  },
-  sensorsContainer: {
-    marginBottom: 8,
-    paddingHorizontal: CONTAINER_PADDING,
-    marginTop: 4,
-  },
-  loadingContainer: {
-    flex: 1,
+  reloadContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    width: '100%',
+    height: '100%',
   },
-  loadingContainerDark: {
-    backgroundColor: '#121212',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#666',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: CONTAINER_PADDING,
-    paddingVertical: 8,
-    paddingBottom: 16,
-  },
-  card: {
-    marginBottom: 6,
-  },
-  deviceCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
+  reloadButton: {
+    backgroundColor: '#007AFF',
+    paddingVertical: 14,
+    paddingHorizontal: 26,
+    borderRadius: 25,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-    flex: 1,
-  },
-  deviceCardDark: {
-    backgroundColor: '#1e1e1e',
     shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
-  deviceHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  deviceIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  deviceIcon: {
-    fontSize: 20,
-  },
-  deviceInfo: {
-    flex: 1,
-  },
-  deviceName: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 1,
-  },
-  deviceType: {
-    fontSize: 10,
-    color: '#666',
-  },
-  sensorValueContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
-    flex: 1,
-  },
-  sensorValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  sensorUnit: {
-    fontSize: 14,
-    fontWeight: '500',
-    opacity: 0.8,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptyMessage: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  textDark: {
-    color: '#fff',
-  },
-  textSecondaryDark: {
-    color: '#aaa',
-  },
-  controlsHeader: {
-    marginBottom: 8,
-    paddingHorizontal: 4,
-  },
-  controlsTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#333',
-  },
-  camerasSensorSection: {
-    marginBottom: 20,
-  },
-  sectionHeader: {
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-  },
-  camerasAndSensorsContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    height: 200, // Fixed height to make it more compact
-  },
-  camerasColumn: {
-    flex: 1,
-  },
-  cameraCardContainer: {
-    marginBottom: 12,
-  },
-  sensorStatusColumn: {
-    flex: 1,
-  },
+  reloadButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  camerasList: { paddingHorizontal: CONTAINER_PADDING, paddingVertical: 8 },
+  cameraCardItem: { marginBottom: 10 },
+  sensorsContainer: { marginBottom: 8, paddingHorizontal: CONTAINER_PADDING, marginTop: 4 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingContainerDark: { backgroundColor: '#121212' },
+  loadingText: { fontSize: 16, color: '#666' },
+  scrollContent: { paddingHorizontal: CONTAINER_PADDING, paddingVertical: 8, paddingBottom: 16 },
+  emptyColumnContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
+  emptyColumnIcon: { fontSize: 40, marginBottom: 12 },
+  emptyColumnTitle: { fontSize: 16, fontWeight: '600', color: '#333', marginBottom: 6 },
+  emptyColumnMessage: { fontSize: 13, color: '#666', textAlign: 'center' },
+  textDark: { color: '#fff' },
+  textSecondaryDark: { color: '#aaa' },
 });
 
 export default DashboardScreen;

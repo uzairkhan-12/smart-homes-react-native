@@ -83,20 +83,27 @@ export default function LoginScreen() {
     if (fullCode.length === 6) {
       setIsLoading(true);
       try {
+        // Use the AuthContext login function which handles PIN validation internally
         const success = await login(fullCode);
         if (success) {
           router.replace('/(tabs)');
         } else {
           Alert.alert('Login Failed', 'Invalid access code. Please try again.');
-          setCode(['', '', '', '', '', '']);
-          inputs.current[0]?.focus();
+          resetForm();
         }
       } catch (error) {
+        console.error('Login error:', error);
         Alert.alert('Error', 'An error occurred during login. Please try again.');
+        resetForm();
       } finally {
         setIsLoading(false);
       }
     }
+  };
+
+  const resetForm = () => {
+    setCode(['', '', '', '', '', '']);
+    inputs.current[0]?.focus();
   };
 
   const toggleTheme = () => setTheme(isDark ? 'light' : 'dark');
@@ -115,8 +122,8 @@ export default function LoginScreen() {
       zIndex: 1000,
     },
     topLogo: {
-      width: 70, // Increased from 50
-      height: 70, // Increased from 50
+      width: 70,
+      height: 70,
       resizeMode: 'contain',
     },
     themeToggleContainer: {
@@ -135,8 +142,8 @@ export default function LoginScreen() {
       marginBottom: 32,
     },
     logoImage: {
-      width: 200, // Increased from 160
-      height: 150, // Increased from 120
+      width: 200,
+      height: 150,
     },
     title: {
       fontSize: 32,
@@ -234,7 +241,7 @@ export default function LoginScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* PM Logo in top left - Larger size */}
+        {/* PM Logo in top left */}
         <View style={styles.logoTopContainer}>
           <Image
             source={
@@ -295,7 +302,7 @@ export default function LoginScreen() {
                       focusedIndex === index && styles.codeInputFocused,
                       code[index] && styles.codeInputFilled,
                     ]}
-                    value={code[index] ? '*' : ''} // Show asterisk instead of number
+                    value={code[index] ? '*' : ''}
                     onChangeText={(text) => handleCodeChange(text, index)}
                     onFocus={() => setFocusedIndex(index)}
                     onBlur={() => setFocusedIndex(null)}
@@ -321,7 +328,7 @@ export default function LoginScreen() {
                       focusedIndex === index && styles.codeInputFocused,
                       code[index] && styles.codeInputFilled,
                     ]}
-                    value={code[index] ? '*' : ''} // Show asterisk instead of number
+                    value={code[index] ? '*' : ''}
                     onChangeText={(text) => handleCodeChange(text, index)}
                     onFocus={() => setFocusedIndex(index)}
                     onBlur={() => setFocusedIndex(null)}
@@ -352,8 +359,6 @@ export default function LoginScreen() {
               Contact support for assistance
             </Text>
           </ScrollView>
-
-          {/* Footer removed */}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

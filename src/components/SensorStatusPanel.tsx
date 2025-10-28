@@ -17,13 +17,22 @@ const SensorStatusPanel: React.FC<SensorStatusPanelProps> = ({
   const { isDark } = useTheme();
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
+  // Check sensor states
+  const allSensorsConfigured = sensors.length > 0 && sensors.every(sensor => 
+    sensor.entity && sensor.entity.trim() !== '' && binarySensorData[sensor.entity]
+  );
+
+  const hasActiveSensors = sensors.some(sensor => 
+    sensor.entity && binarySensorData[sensor.entity]?.new_state === 'on'
+  );
+
+  const hasUnconfiguredSensors = sensors.some(sensor => 
+    !sensor.entity || sensor.entity.trim() === '' || !binarySensorData[sensor.entity]
+  );
+
   // Animation for active sensors
   useEffect(() => {
-    const hasActiveSensor = sensors.some(sensor => 
-      sensor.entity && binarySensorData[sensor.entity]?.new_state === 'on'
-    );
-
-    if (hasActiveSensor) {
+    if (hasActiveSensors) {
       const pulse = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
@@ -41,14 +50,14 @@ const SensorStatusPanel: React.FC<SensorStatusPanelProps> = ({
       pulse.start();
       return () => pulse.stop();
     }
-  }, [binarySensorData, sensors, pulseAnim]);
+  }, [hasActiveSensors, pulseAnim]);
 
   const getSensorIcon = (type: string, isActive: boolean): string => {
     switch (type) {
       case 'water': 
         return isActive ? '🌊' : '💧'; // Water flowing vs water drop
       case 'radar': 
-        return isActive ? '🔴' : '📡'; // Red dot for motion vs radar dish
+        return isActive ? '🏃' : '👤'; // Running person vs standing person
       case 'door': 
         return isActive ? '🔓' : '🚪'; // Open lock vs door
       case 'security': 
@@ -74,46 +83,129 @@ const SensorStatusPanel: React.FC<SensorStatusPanelProps> = ({
 
     const isActive = data.new_state === 'on';
     
-    // Determine if active state is an "issue" based on sensor type
+    // All active states are considered issues/warnings
+    if (isActive) {
+      switch (sensor.type) {
+        case 'water':
+          return { 
+            hasIssue: true, 
+            status: 'Water Detected!', 
+            isDisabled: false,
+            color: '#ef5350' // Red for active
+          };
+        case 'door':
+          return { 
+            hasIssue: true, 
+            status: 'Door Open!', 
+            isDisabled: false,
+            color: '#ef5350' // Red for active
+          };
+        case 'security':
+          return { 
+            hasIssue: true, 
+            status: 'Security Alert!', 
+            isDisabled: false,
+            color: '#ef5350' // Red for active
+          };
+        case 'radar':
+          return { 
+            hasIssue: true, 
+            status: 'Motion Detected!', 
+            isDisabled: false,
+            color: '#ef5350' // Red for active
+          };
+        case 'motion':
+          return { 
+            hasIssue: true, 
+            status: 'Motion Detected!', 
+            isDisabled: false,
+            color: '#ef5350' // Red for active
+          };
+        case 'occupancy':
+          return { 
+            hasIssue: true, 
+            status: 'Occupancy Detected!', 
+            isDisabled: false,
+            color: '#ef5350' // Red for active
+          };
+        default:
+          return { 
+            hasIssue: true, 
+            status: 'Activity Detected!', 
+            isDisabled: false,
+            color: '#ef5350' // Red for active
+          };
+      }
+    }
+    
+    // Inactive states (normal/secure)
     switch (sensor.type) {
       case 'water':
         return { 
-          hasIssue: isActive, 
-          status: isActive ? 'Water Detected' : 'Normal', 
+          hasIssue: false, 
+          status: 'Normal', 
           isDisabled: false,
-          color: isActive ? '#ef5350' : '#2196f3'
+          color: '#10b981' // Green for normal
         };
       case 'door':
         return { 
-          hasIssue: isActive, 
-          status: isActive ? 'Open' : 'Closed', 
+          hasIssue: false, 
+          status: 'Closed', 
           isDisabled: false,
-          color: isActive ? '#ef5350' : '#2196f3'
+          color: '#10b981' // Green for normal
         };
       case 'security':
         return { 
-          hasIssue: isActive, 
-          status: isActive ? 'Alert' : 'Secure', 
+          hasIssue: false, 
+          status: 'Secure', 
           isDisabled: false,
-          color: isActive ? '#ef5350' : '#2196f3'
+          color: '#10b981' // Green for normal
         };
       case 'radar':
       case 'motion':
       case 'occupancy':
         return { 
           hasIssue: false, 
-          status: isActive ? 'Motion' : 'Clear', 
+          status: 'Clear', 
           isDisabled: false,
-          color: isActive ? '#ff9800' : '#2196f3'
+          color: '#10b981' // Green for normal
         };
       default:
         return { 
           hasIssue: false, 
-          status: isActive ? 'Active' : 'Inactive', 
+          status: 'Inactive', 
           isDisabled: false,
-          color: isActive ? '#ff9800' : '#2196f3'
+          color: '#10b981' // Green for normal
         };
     }
+  };
+
+  const getStatusMessage = () => {
+    if (hasUnconfiguredSensors) {
+      return {
+        text: 'Gray sensors need configuration in Settings',
+        type: 'warning' as const
+      };
+    }
+    
+    if (hasActiveSensors) {
+      return {
+        text: '⚠️ Sensor alerts detected! Check status below',
+        type: 'alert' as const
+      };
+    }
+    
+    if (allSensorsConfigured) {
+      return {
+        text: '✓ All sensors normal and secure',
+        type: 'success' as const
+      };
+    }
+    
+    return {
+      text: 'Configure sensors in Settings',
+      type: 'warning' as const
+    };
   };
 
   // Group sensors by layout type
@@ -170,18 +262,34 @@ const SensorStatusPanel: React.FC<SensorStatusPanelProps> = ({
     });
   };
 
+  const statusMessage = getStatusMessage();
+
   return (
     <View style={[styles.container, isDark && styles.containerDark]}>
       <Text style={[styles.title, isDark && styles.titleDark]}>Sensors Status</Text>
       
-      {/* Info message for disabled sensors */}
-      {sensors.some(sensor => !sensor.entity || sensor.entity.trim() === '' || !binarySensorData[sensor.entity]) && (
-        <View style={[styles.infoMessage, isDark && styles.infoMessageDark]}>
-          <Text style={[styles.infoText, isDark && styles.infoTextDark]}>
-            Gray sensors need configuration in Settings
-          </Text>
-        </View>
-      )}
+      {/* Conditional status message */}
+      <View style={[
+        styles.infoMessage, 
+        statusMessage.type === 'success' && styles.infoMessageSuccess,
+        statusMessage.type === 'warning' && styles.infoMessageWarning,
+        statusMessage.type === 'alert' && styles.infoMessageAlert,
+        isDark && statusMessage.type === 'success' && styles.infoMessageSuccessDark,
+        isDark && statusMessage.type === 'warning' && styles.infoMessageWarningDark,
+        isDark && statusMessage.type === 'alert' && styles.infoMessageAlertDark,
+      ]}>
+        <Text style={[
+          styles.infoText, 
+          statusMessage.type === 'success' && styles.infoTextSuccess,
+          statusMessage.type === 'warning' && styles.infoTextWarning,
+          statusMessage.type === 'alert' && styles.infoTextAlert,
+          isDark && statusMessage.type === 'success' && styles.infoTextSuccessDark,
+          isDark && statusMessage.type === 'warning' && styles.infoTextWarningDark,
+          isDark && statusMessage.type === 'alert' && styles.infoTextAlertDark,
+        ]}>
+          {statusMessage.text}
+        </Text>
+      </View>
       
       {/* Regular Sensors - 4 per row */}
       {regularSensors.length > 0 && (
@@ -238,22 +346,50 @@ const styles = StyleSheet.create({
     borderTopColor: '#e5e5e5',
   },
   infoMessage: {
-    backgroundColor: '#f3f4f6',
     borderRadius: 8,
     padding: 10,
     marginBottom: 12,
     alignItems: 'center',
   },
-  infoMessageDark: {
-    backgroundColor: '#374151',
+  infoMessageSuccess: {
+    backgroundColor: '#ecfdf5',
+  },
+  infoMessageWarning: {
+    backgroundColor: '#fffbeb',
+  },
+  infoMessageAlert: {
+    backgroundColor: '#fef2f2',
+  },
+  infoMessageSuccessDark: {
+    backgroundColor: '#064e3b',
+  },
+  infoMessageWarningDark: {
+    backgroundColor: '#451a03',
+  },
+  infoMessageAlertDark: {
+    backgroundColor: '#7f1d1d',
   },
   infoText: {
     fontSize: 11,
-    color: '#6b7280',
     fontWeight: '500',
   },
-  infoTextDark: {
-    color: '#9ca3af',
+  infoTextSuccess: {
+    color: '#065f46',
+  },
+  infoTextWarning: {
+    color: '#92400e',
+  },
+  infoTextAlert: {
+    color: '#dc2626',
+  },
+  infoTextSuccessDark: {
+    color: '#34d399',
+  },
+  infoTextWarningDark: {
+    color: '#fbbf24',
+  },
+  infoTextAlertDark: {
+    color: '#fca5a5',
   },
   sensorIcon: {
     backgroundColor: '#f8f9fa',
@@ -317,12 +453,6 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-  },
-  statusDotNormal: {
-    backgroundColor: '#4caf50',
-  },
-  statusDotIssue: {
-    backgroundColor: '#ef5350',
   },
 });
 

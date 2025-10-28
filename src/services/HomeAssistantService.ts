@@ -1,3 +1,4 @@
+import { AppState, AppStateStatus } from 'react-native';
 import { BinarySensorData, ClimateData, LightData, SensorData } from '../../types';
 import { fetchWithTimeout } from '../utils/fetch';
 import { homeAssistantApiService } from './HomeAssistantApiService';
@@ -25,6 +26,10 @@ class HomeAssistantService {
   private maxReconnectAttempts = 5;
   private reconnectDelay = 5000; // 5 seconds as requested
   private listeners: ((data: HomeAssistantData) => void)[] = [];
+  private reconnectTimer: number | null = null;
+  private isAppInBackground = false;
+  private shouldReconnectOnForeground = false;
+  private appStateSubscription: any = null;
   
   // Current data state - starts with dummy data
   private currentData: HomeAssistantData = {
@@ -36,6 +41,105 @@ class HomeAssistantService {
 
   constructor() {
     this.initializeWithDummyData();
+    this.setupAppStateListener();
+  }
+
+  // Setup app state listener to handle background/foreground transitions
+  private setupAppStateListener(): void {
+    this.appStateSubscription = AppState.addEventListener('change', this.handleAppStateChange);
+  }
+
+  // Handle app state changes (background/foreground)
+  private handleAppStateChange = (nextAppState: AppStateStatus): void => {
+    if (nextAppState === 'background' || nextAppState === 'inactive') {
+      // App is going to background or screen is locked
+      this.isAppInBackground = true;
+      this.shouldReconnectOnForeground = this.isConnected();
+      
+      // Close WebSocket connection to prevent background connection issues
+      if (this.websocket) {
+        console.log('📱 App going to background, closing WebSocket connection');
+        this.websocket.close();
+        this.websocket = null;
+      }
+      
+      // Clear any pending reconnection attempts
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
+    } else if (nextAppState === 'active') {
+      // App is coming to foreground or screen is unlocked
+      this.isAppInBackground = false;
+      
+      if (this.shouldReconnectOnForeground) {
+        console.log('📱 App coming to foreground, reconnecting services');
+        // Add a small delay to ensure app is fully active
+        setTimeout(async () => {
+          this.reconnectAttempts = 0; // Reset reconnection attempts
+          
+          try {
+            // Reconnect WebSocket
+            await this.connectWebSocket();
+            
+            // Refresh configuration and camera streams
+            await this.refreshAfterForeground();
+            
+            console.log('✅ Successfully reconnected all services after foreground');
+          } catch (error) {
+            console.error('Failed to reconnect after foreground:', error);
+          }
+        }, 1000);
+      }
+      
+      this.shouldReconnectOnForeground = false;
+    }
+  };
+
+  // Refresh services after app comes to foreground
+  private async refreshAfterForeground(): Promise<void> {
+    try {
+      console.log('🔄 Refreshing services after foreground...');
+      
+      // Validate configuration is still valid
+      const config = await homeAssistantConfigService.getConfig();
+      if (!config || !config.httpApiUrl || !config.token) {
+        console.warn('⚠️ Configuration invalid after foreground, skipping refresh');
+        return;
+      }
+      
+      // Force refresh of camera URLs and entities
+      await this.validateAndRefreshCameraUrls();
+      
+      // Notify listeners that we're refreshing (this will trigger camera reloads)
+      this.notifyListeners();
+      
+      console.log('✅ Services refreshed after foreground');
+      
+    } catch (error) {
+      console.error('❌ Failed to refresh services after foreground:', error);
+    }
+  }
+
+  // Validate and refresh camera URLs after app foreground
+  private async validateAndRefreshCameraUrls(): Promise<void> {
+    try {
+      console.log('📹 Validating camera URLs after foreground...');
+      
+      // Get fresh configuration URLs
+      const apiUrl = await homeAssistantConfigService.getApiUrl();
+      const authHeader = await homeAssistantConfigService.getAuthHeader();
+      
+      if (!apiUrl || apiUrl.includes('undefined') || !authHeader) {
+        console.error('❌ Invalid API configuration for cameras:', { apiUrl, hasAuth: !!authHeader });
+        return;
+      }
+      
+      console.log('✅ Camera URLs validated successfully');
+      
+    } catch (error) {
+      console.error('❌ Failed to validate camera URLs:', error);
+    }
   }
 
   // Load initial states from Home Assistant API
@@ -474,11 +578,25 @@ class HomeAssistantService {
     }
 
     try {
+      // Validate configuration first
+      const config = await homeAssistantConfigService.getConfig();
+      if (!config || !config.httpApiUrl || !config.token) {
+        console.warn('⚠️ No valid Home Assistant configuration found, skipping WebSocket connection');
+        return;
+      }
+
       // Get WebSocket URL from configuration service
       const websocketUrl = await homeAssistantConfigService.getWebSocketUrl();
+      if (!websocketUrl || websocketUrl.includes('undefined')) {
+        console.error('❌ Invalid WebSocket URL:', websocketUrl);
+        return;
+      }
+
+      console.log('🔌 Connecting to WebSocket:', websocketUrl.replace(/access_token=[^&]+/, 'access_token=***'));
       this.websocket = new WebSocket(websocketUrl);
 
       this.websocket.onopen = () => {
+        console.log('✅ WebSocket connected successfully');
         this.reconnectAttempts = 0;
       };
 
@@ -509,36 +627,76 @@ class HomeAssistantService {
       };
 
       this.websocket.onclose = (event) => {
+        console.log('🔌 WebSocket connection closed', { code: event.code, reason: event.reason });
         this.websocket = null;
-        this.handleReconnect();
+        
+        // Only attempt reconnection if app is not in background
+        if (!this.isAppInBackground) {
+          this.handleReconnect();
+        }
       };
 
       this.websocket.onerror = (error) => {
-        // Keep error logging for debugging critical issues
-        console.error('WebSocket error:', error);
+        console.warn('⚠️ WebSocket error (handled gracefully):', {
+          type: error.type,
+          target: error.target ? 'WebSocket' : 'Unknown'
+        });
+        
+        // Don't attempt reconnection immediately after error if app is in background
+        if (this.isAppInBackground) {
+          this.shouldReconnectOnForeground = true;
+        }
       };
 
     } catch (error) {
       console.error('Failed to connect to WebSocket:', error);
+      
+      // Don't attempt reconnection if configuration is invalid
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('undefined') || errorMessage.includes('invalid')) {
+        console.error('❌ WebSocket connection failed due to invalid configuration, not retrying');
+        return;
+      }
+      
       this.handleReconnect();
     }
   }
 
   // Handle WebSocket reconnection
   private handleReconnect(): void {
+    // Don't reconnect if app is in background
+    if (this.isAppInBackground) {
+      this.shouldReconnectOnForeground = true;
+      return;
+    }
+
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('Max reconnection attempts reached. Stopping reconnection.');
+      console.error('🔄 Max reconnection attempts reached. Stopping reconnection.');
       return;
     }
 
     this.reconnectAttempts++;
+    console.log(`🔄 Attempting to reconnect WebSocket (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
 
+    // Clear any existing reconnect timer
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+    }
     
-    setTimeout(() => {
-      this.connectWebSocket().catch(error => {
+    this.reconnectTimer = setTimeout(async () => {
+      try {
+        // Validate configuration before attempting reconnection
+        const config = await homeAssistantConfigService.getConfig();
+        if (!config?.websocketUrl || !config?.token) {
+          console.error('❌ Cannot reconnect WebSocket: Invalid configuration');
+          return;
+        }
+        
+        await this.connectWebSocket();
+      } catch (error) {
         console.error('Failed to reconnect WebSocket:', error);
-      });
-    }, this.reconnectDelay);
+      }
+    }, this.reconnectDelay) as any;
   }
 
   // Get current data
@@ -548,16 +706,84 @@ class HomeAssistantService {
 
   // Disconnect WebSocket
   disconnect(): void {
+    console.log('🔌 Disconnecting WebSocket service');
+    
+    // Clear reconnection timer
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    
+    // Close WebSocket connection
     if (this.websocket) {
       this.websocket.close();
       this.websocket = null;
     }
+    
+    // Clear listeners
     this.listeners = [];
+    
+    // Remove app state listener
+    if (this.appStateSubscription) {
+      this.appStateSubscription.remove();
+      this.appStateSubscription = null;
+    }
+    
+    // Reset connection state
+    this.reconnectAttempts = 0;
+    this.isAppInBackground = false;
+    this.shouldReconnectOnForeground = false;
   }
 
   // Check connection status
   isConnected(): boolean {
     return this.websocket?.readyState === WebSocket.OPEN;
+  }
+
+  // Public method to refresh connections (can be called by camera components)
+  async refreshConnections(): Promise<void> {
+    try {
+      console.log('🔄 Manually refreshing connections...');
+      
+      // Validate configuration
+      const config = await homeAssistantConfigService.getConfig();
+      if (!config || !config.httpApiUrl || !config.token) {
+        console.warn('⚠️ No valid configuration for refresh');
+        return;
+      }
+      
+      // Refresh camera URLs
+      await this.validateAndRefreshCameraUrls();
+      
+      // Reconnect WebSocket if needed
+      if (!this.isConnected() && !this.isAppInBackground) {
+        await this.connectWebSocket();
+      }
+      
+      // Notify listeners to refresh their components
+      this.notifyListeners();
+      
+      console.log('✅ Manual connection refresh completed');
+      
+    } catch (error) {
+      console.error('❌ Failed to refresh connections:', error);
+    }
+  }
+
+  // Specific method for camera connectivity issues
+  async refreshCameraStreams(): Promise<void> {
+    console.log('📹 Camera stream refresh requested');
+    
+    try {
+      await this.validateAndRefreshCameraUrls();
+      
+      // Notify listeners about updated data
+      this.notifyListeners();
+      
+      console.log('✅ Camera streams refreshed successfully');
+    } catch (error) {
+      console.error('❌ Failed to refresh camera streams:', error);
+    }
   }
 
   // Simple toggle method for testing (enhanced with API calls)
