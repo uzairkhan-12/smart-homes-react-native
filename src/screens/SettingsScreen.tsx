@@ -42,15 +42,15 @@ interface User {
 type SettingsSection = 'devices' | 'users';
 
 const SettingsScreen: React.FC = () => {
-  const { hasAdminAccess } = useAuth();
+  const { hasAdminAccess, isAuthenticated } = useAuth();
   const { theme, setTheme } = useTheme();
   const systemColorScheme = useColorScheme();
   const isDarkTheme = theme === 'dark' || (theme === 'system' && systemColorScheme === 'dark');
   const colors = getColors(isDarkTheme);
 
-  // Redirect non-admin users
+  // Redirect non-admin users, but only if they are authenticated
   useEffect(() => {
-    if (!hasAdminAccess) {
+    if (isAuthenticated && !hasAdminAccess) {
       Alert.alert(
         'Access Denied',
         'You need admin privileges to access settings.',
@@ -62,7 +62,7 @@ const SettingsScreen: React.FC = () => {
         ]
       );
     }
-  }, [hasAdminAccess]);
+  }, [hasAdminAccess, isAuthenticated]);
 
   const styles = StyleSheet.create({
     container: { 
@@ -908,8 +908,8 @@ const getSectionIcon = (sectionType: string): any => {
     );
   }
 
-  // Don't render settings if user doesn't have admin access
-  if (!hasAdminAccess) {
+  // Don't render settings if user doesn't have admin access (but only if authenticated)
+  if (isAuthenticated && !hasAdminAccess) {
     return (
       <View style={styles.loadingContainer}>
         <Ionicons name="lock-closed-outline" size={48} color={colors.textSecondary} style={{ marginBottom: 16 }} />
