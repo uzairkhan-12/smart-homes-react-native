@@ -12,11 +12,11 @@ export default function SettingsHeader() {
   const insets = useSafeAreaInsets();
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Update time every minute
+  // Update time every second for real-time accuracy
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-    }, 60000);
+    }, 1000);
 
     return () => clearInterval(timer);
   }, []);

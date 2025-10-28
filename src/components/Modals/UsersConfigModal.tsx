@@ -46,8 +46,8 @@ const UserConfigModal: React.FC<UserConfigModalProps> = ({
   const [role, setRole] = useState<'Admin' | 'User' | 'Pro Admin'>('User');
   const [isSaving, setIsSaving] = useState(false);
 
-  // Check if the current editing user is a Pro Admin
-  const isEditingProAdmin = editingUser?.role === 'Pro Admin';
+  // Check if the current editing user is the system Pro Admin (non-editable)
+  const isEditingProAdmin = editingUser && deviceStorageService.isSystemProAdmin(editingUser.id);
 
   useEffect(() => {
     if (visible) {
@@ -320,7 +320,7 @@ const UserConfigModal: React.FC<UserConfigModalProps> = ({
               <View style={[styles.warningBanner, { backgroundColor: colors.warning + '20' }]}>
                 <Ionicons name="shield-checkmark-outline" size={16} color={colors.warning} />
                 <Text style={[styles.warningText, { color: colors.warning }]}>
-                  You are editing a Pro Admin user. Only the PIN can be updated.
+                  You are editing the system Pro Admin user. Only the PIN can be updated.
                 </Text>
               </View>
             )}

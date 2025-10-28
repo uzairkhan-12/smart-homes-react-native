@@ -459,9 +459,9 @@ const SettingsScreen: React.FC = () => {
     security: true,
   });
 
-  // Check if user is Pro Admin (protected user)
+  // Check if user is the system Pro Admin (non-editable)
   const isProAdmin = (user: User): boolean => {
-    return user.role === 'Pro Admin';
+    return deviceStorageService.isSystemProAdmin(user.id);
   };
 
   useEffect(() => {

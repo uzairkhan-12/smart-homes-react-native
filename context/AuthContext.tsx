@@ -33,7 +33,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const initializeAuth = async () => {
-    // Initialize default users if none exist
+    // Initialize default Pro Admin (non-editable system user)
+    await deviceStorageService.initializeDefaultProAdmin();
+    
+    // Initialize default admin
     await deviceStorageService.initializeDefaultAdmin();
     
     // Also add a default regular user

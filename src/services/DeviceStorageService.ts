@@ -536,6 +536,27 @@ class DeviceStorageService {
     }
   }
 
+  // Initialize default Pro Admin user (system user, non-editable)
+  async initializeDefaultProAdmin(): Promise<void> {
+    try {
+      const users = await this.loadUsers();
+      const proAdminExists = users.some(u => u.id === 'pro_admin_system' && u.role === 'Pro Admin');
+      
+      if (!proAdminExists) {
+        const defaultProAdmin: User = {
+          id: 'pro_admin_system',
+          name: 'Pro Admin',
+          pin: '789789',
+          role: 'Pro Admin'
+        };
+        await this.addUser(defaultProAdmin);
+        console.log('✅ Default Pro Admin user created');
+      }
+    } catch (error) {
+      console.error('Error initializing default Pro Admin:', error);
+    }
+  }
+
   // Validate user PIN
   async validateUserPin(pin: string): Promise<{ isValid: boolean; user?: User }> {
     try {
@@ -585,6 +606,21 @@ class DeviceStorageService {
       console.error('Error checking PIN existence:', error);
       return false;
     }
+  }
+
+  // Check if user is the system Pro Admin (non-editable)
+  isSystemProAdmin(userId: string): boolean {
+    return userId === 'pro_admin_system';
+  }
+
+  // Check if user can be edited (system Pro Admin cannot be edited)
+  async canEditUser(userId: string): Promise<boolean> {
+    return !this.isSystemProAdmin(userId);
+  }
+
+  // Check if user can be deleted (system Pro Admin cannot be deleted)
+  async canDeleteUser(userId: string): Promise<boolean> {
+    return !this.isSystemProAdmin(userId);
   }
 
   // Comprehensive method to ensure all sensor counts and names are correct
