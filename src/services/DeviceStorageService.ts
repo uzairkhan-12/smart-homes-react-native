@@ -34,6 +34,18 @@ class DeviceStorageService {
         entity: '',
         type: 'temp_humidity'
       })),
+      temperatureSensors: Array.from({ length: 2 }, (_, i) => ({
+        id: `temperature_${i + 1}`,
+        name: `Temperature ${i + 1}`,
+        entity: '',
+        type: 'temperature'
+      })),
+      humiditySensors: Array.from({ length: 2 }, (_, i) => ({
+        id: `humidity_${i + 1}`,
+        name: `Humidity ${i + 1}`,
+        entity: '',
+        type: 'humidity'
+      })),
       doorSensor: {
         id: 'door_1',
         name: 'Front Door',
@@ -58,16 +70,16 @@ class DeviceStorageService {
         {
           id: 'camera_1',
           name: 'Front Door Camera',
-          entity: 'camera.front_door',
+          entity: '', // No camera entity - using direct stream URL
           type: 'camera',
-          stream_url: 'http://192.168.100.95:8123/api/camera_proxy_stream/camera.front_door',
+          stream_url: 'http://192.168.100.60:8123/api/camera_proxy_stream/camera.front_door',
           motion_sensor: 'binary_sensor.frontdoor_1_motion',
           occupancy_sensor: 'binary_sensor.frontdoor_1_person_occupancy'
         } as SensorDevice,
         {
           id: 'camera_2',
           name: 'Office Camera',
-          entity: 'camera.office_demo',
+          entity: '', // No camera entity - using direct stream URL
           type: 'camera',
           stream_url: 'http://192.168.100.55:5050/api/office_demo',
           motion_sensor: 'binary_sensor.office_demo_motion',
@@ -113,7 +125,30 @@ class DeviceStorageService {
     try {
       const jsonValue = await AsyncStorage.getItem(STORAGE_KEY);
       if (jsonValue != null) {
-        return JSON.parse(jsonValue);
+        const loadedDevices = JSON.parse(jsonValue);
+        
+        // Ensure new sensor arrays exist for backward compatibility
+        if (!loadedDevices.temperatureSensors) {
+          loadedDevices.temperatureSensors = Array.from({ length: 2 }, (_, i) => ({
+              id: `temperature_${i + 1}`,
+              name: `Temperature ${i + 1}`,
+              entity: '',
+              type: 'temperature'
+            }));
+        }
+        
+        if (!loadedDevices.humiditySensors) {
+          loadedDevices.humiditySensors = Array.from({ length: 2 }, (_, i) => ({
+              id: `humidity_${i + 1}`,
+              name: `Humidity ${i + 1}`,
+              entity: '',
+              type: 'humidity'
+            }));
+        }
+        
+        // Save the updated devices with new arrays
+        await this.saveDevices(loadedDevices);
+        return loadedDevices;
       } else {
         // Return default devices if none exist
         const defaultDevices = this.getDefaultDevices();
@@ -162,6 +197,8 @@ class DeviceStorageService {
       allDevices.push(...devices.waterSensors.filter(d => d.entity.trim() !== ''));
       allDevices.push(...devices.radarSensors.filter(d => d.entity.trim() !== ''));
       allDevices.push(...devices.tempHumiditySensors.filter(d => d.entity.trim() !== ''));
+      allDevices.push(...(devices.temperatureSensors || []).filter(d => d.entity.trim() !== ''));
+      allDevices.push(...(devices.humiditySensors || []).filter(d => d.entity.trim() !== ''));
       allDevices.push(...devices.lights.filter(d => d.entity.trim() !== ''));
       allDevices.push(...devices.acs.filter(d => d.entity.trim() !== ''));
 
@@ -207,6 +244,8 @@ class DeviceStorageService {
       allDevices.push(...devices.waterSensors);
       allDevices.push(...devices.radarSensors);
       allDevices.push(...devices.tempHumiditySensors);
+      allDevices.push(...(devices.temperatureSensors || []));
+      allDevices.push(...(devices.humiditySensors || []));
       allDevices.push(...devices.lights);
       allDevices.push(...devices.cameras);
       allDevices.push(...devices.acs);
@@ -305,6 +344,24 @@ class DeviceStorageService {
       // Update temp humidity sensor names
       devices.tempHumiditySensors.forEach((sensor, i) => {
         const expectedName = `Dummy Temp Humidity ${i + 1}`;
+        if (sensor.name !== expectedName && sensor.entity.trim() === '') {
+          sensor.name = expectedName;
+          hasChanges = true;
+        }
+      });
+
+      // Update dedicated temperature sensor names
+      (devices.temperatureSensors || []).forEach((sensor, i) => {
+        const expectedName = `Temperature ${i + 1}`;
+        if (sensor.name !== expectedName && sensor.entity.trim() === '') {
+          sensor.name = expectedName;
+          hasChanges = true;
+        }
+      });
+
+      // Update dedicated humidity sensor names
+      (devices.humiditySensors || []).forEach((sensor, i) => {
+        const expectedName = `Humidity ${i + 1}`;
         if (sensor.name !== expectedName && sensor.entity.trim() === '') {
           sensor.name = expectedName;
           hasChanges = true;

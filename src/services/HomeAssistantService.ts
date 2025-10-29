@@ -627,9 +627,18 @@ class HomeAssistantService {
       };
 
       this.websocket.onclose = (event) => {
-        console.log('🔌 WebSocket connection closed', { code: event.code, reason: event.reason });
+        try {
+          console.log('🔌 WebSocket connection closed', {
+            code: event?.code,
+            reason: event?.reason,
+            wasClean: event?.wasClean
+          });
+        } catch (logError) {
+          console.log('🔌 WebSocket closed (unable to read event details)', String(logError));
+        }
+
         this.websocket = null;
-        
+
         // Only attempt reconnection if app is not in background
         if (!this.isAppInBackground) {
           this.handleReconnect();
@@ -637,11 +646,19 @@ class HomeAssistantService {
       };
 
       this.websocket.onerror = (error) => {
-        console.warn('⚠️ WebSocket error (handled gracefully):', {
-          type: error.type,
-          target: error.target ? 'WebSocket' : 'Unknown'
-        });
-        
+        try {
+          // Attempt to extract useful info from the error object
+          const errObj: any = error || {};
+          const details = {
+            message: errObj.message || errObj.type || 'Unknown WebSocket error',
+            code: errObj.code || null,
+            target: errObj.target ? 'WebSocket' : null
+          };
+          console.error('⚠️ WebSocket error (handled gracefully):', details, errObj);
+        } catch (logErr) {
+          console.error('⚠️ WebSocket error (could not serialize):', String(logErr));
+        }
+
         // Don't attempt reconnection immediately after error if app is in background
         if (this.isAppInBackground) {
           this.shouldReconnectOnForeground = true;
@@ -650,14 +667,14 @@ class HomeAssistantService {
 
     } catch (error) {
       console.error('Failed to connect to WebSocket:', error);
-      
+
       // Don't attempt reconnection if configuration is invalid
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (errorMessage.includes('undefined') || errorMessage.includes('invalid')) {
         console.error('❌ WebSocket connection failed due to invalid configuration, not retrying');
         return;
       }
-      
+
       this.handleReconnect();
     }
   }

@@ -5,7 +5,8 @@ import {
   DeviceSection,
   LightCard,
   SensorDetailsModal,
-  SensorStatusPanel
+  SensorStatusPanel,
+  
 } from '@/components';
 import DashboardHeader from '@/components/ui/DashboardHeader';
 import TempHumidityDetailsModal from '@/components/ui/TempHumidityDetailsModal';
@@ -30,6 +31,7 @@ import {
 import { BinarySensorData, ClimateData, LightData, SensorData, SensorDevice } from '../../types';
 import { deviceStorageService } from '../services/DeviceStorageService';
 import { HomeAssistantData, homeAssistantService } from '../services/HomeAssistantService';
+import { homeAssistantApiService } from '../services/HomeAssistantApiService';
 import { ensureCorrectCameraConfig } from '../utils/configurationFixer';
 
 const CONTAINER_PADDING = 4;
@@ -64,6 +66,7 @@ const DashboardScreen: React.FC = () => {
   const [selectedSensorData, setSelectedSensorData] = useState<BinarySensorData | null>(null);
   const [avgTemperature, setAvgTemperature] = useState<number>(0);
   const [avgHumidity, setAvgHumidity] = useState<number>(0);
+  const [storedDevices, setStoredDevices] = useState<any>(null);
 
   const [appState, setAppState] = useState<AppStateStatus>(AppState.currentState);
 
@@ -106,7 +109,10 @@ const DashboardScreen: React.FC = () => {
   );
 
   useEffect(() => {
-    calculateAverages();
+    const updateAverages = async () => {
+      await calculateAverages();
+    };
+    updateAverages();
   }, [haData.sensorData, configuredDevices]);
 
   // === LOADERS ===
@@ -119,6 +125,11 @@ const DashboardScreen: React.FC = () => {
       const devices = await deviceStorageService.getAllDevices();
       setConfiguredDevices(devices);
       setCameraDevices(devices.filter(d => d.type === 'camera'));
+      
+      // Load stored devices for the modal (with separate sensor arrays)
+      const stored = await deviceStorageService.loadDevices();
+      setStoredDevices(stored);
+      
       const configuredOnly = await deviceStorageService.getConfiguredDevices();
       await homeAssistantService.initializeWithConfiguredDevices(configuredOnly);
     } catch (error) {
@@ -140,28 +151,100 @@ const DashboardScreen: React.FC = () => {
 
   // === HELPERS ===
 
-  const calculateAverages = () => {
-    const tempHumidityDevices = configuredDevices?.filter(d => d.type === 'temp_humidity') || [];
-    if (!tempHumidityDevices.length) {
+  const calculateAverages = async () => {
+    try {
+      console.log('📊 Calculating 12-hour averages from Home Assistant history...');
+      
+      // Get sensor configurations
+      const devices = await deviceStorageService.loadDevices();
+      const { temperatureSensors = [], humiditySensors = [] } = devices;
+      
+      // Fetch 12-hour averages from Home Assistant API
+      const averages = await homeAssistantApiService.getTwelveHourAverages(temperatureSensors, humiditySensors);
+      
+      if (averages.temperatureCount > 0 || averages.humidityCount > 0) {
+        console.log(`📊 Home Assistant API returned averages - Temp: ${averages.temperature.toFixed(1)}°C (${averages.temperatureCount} readings), Humidity: ${averages.humidity.toFixed(1)}% (${averages.humidityCount} readings)`);
+        
+        // Set averages (rounded to 1 decimal place)
+        setAvgTemperature(Math.round(averages.temperature * 10) / 10);
+        setAvgHumidity(Math.round(averages.humidity * 10) / 10);
+      } else {
+        console.log('📊 No historical data available, calculating instant averages...');
+        // Fallback to instant calculation if historical data fails
+        calculateInstantAverages();
+      }
+    } catch (error) {
+      console.error('❌ Error calculating 12-hour averages:', error);
+      // Fallback to instant averages if historical calculation fails
+      calculateInstantAverages();
+    }
+  };
+
+  // Fallback function for instant averages (in case historical data fails)
+  const calculateInstantAverages = async () => {
+    try {
+      // Get sensor configurations from storage
+      const devices = await deviceStorageService.loadDevices();
+      const { temperatureSensors = [], humiditySensors = [] } = devices;
+      
+      // Collect all entity IDs
+      const allEntityIds = [
+        ...temperatureSensors.filter(s => s.entity && s.entity.trim() !== '').map(s => s.entity),
+        ...humiditySensors.filter(s => s.entity && s.entity.trim() !== '').map(s => s.entity)
+      ];
+      
+      if (allEntityIds.length === 0) {
+        console.log('📊 No sensor entities configured for instant averages');
+        setAvgTemperature(0);
+        setAvgHumidity(0);
+        return;
+      }
+      
+      // Get current Home Assistant data
+      const haData = await homeAssistantApiService.fetchConfiguredEntityStates(allEntityIds);
+      
+      // Calculate temperature average
+      let tempSum = 0, tempCount = 0;
+      
+      temperatureSensors.forEach(sensor => {
+        if (sensor.entity && sensor.entity.trim() !== '') {
+          const sensorData = haData.sensorData[sensor.entity];
+          if (sensorData?.new_state) {
+            const value = parseFloat(sensorData.new_state);
+            if (!isNaN(value)) {
+              tempSum += value;
+              tempCount++;
+            }
+          }
+        }
+      });
+
+      // Calculate humidity average
+      let humiditySum = 0, humidityCount = 0;
+      
+      humiditySensors.forEach(sensor => {
+        if (sensor.entity && sensor.entity.trim() !== '') {
+          const sensorData = haData.sensorData[sensor.entity];
+          if (sensorData?.new_state) {
+            const value = parseFloat(sensorData.new_state);
+            if (!isNaN(value)) {
+              humiditySum += value;
+              humidityCount++;
+            }
+          }
+        }
+      });
+
+      // Set averages (rounded to 1 decimal place)
+      setAvgTemperature(tempCount > 0 ? Math.round((tempSum / tempCount) * 10) / 10 : 0);
+      setAvgHumidity(humidityCount > 0 ? Math.round((humiditySum / humidityCount) * 10) / 10 : 0);
+      
+      console.log(`📊 Instant averages calculated - Temp: ${tempCount > 0 ? (tempSum / tempCount).toFixed(1) : '0.0'}°C (${tempCount} sensors), Humidity: ${humidityCount > 0 ? (humiditySum / humidityCount).toFixed(1) : '0.0'}% (${humidityCount} sensors)`);
+    } catch (error) {
+      console.error('❌ Error calculating instant averages:', error);
       setAvgTemperature(0);
       setAvgHumidity(0);
-      return;
     }
-
-    let tSum = 0, hSum = 0, tCount = 0, hCount = 0;
-    tempHumidityDevices.forEach(d => {
-      const dd = getDeviceData(d);
-      if (dd.type === 'sensor' && dd.data) {
-        const data = dd.data as SensorData;
-        const val = parseFloat(data.new_state);
-        if (!isNaN(val)) {
-          if (d.entity.includes('temp')) { tSum += val; tCount++; }
-          if (d.entity.includes('humidity')) { hSum += val; hCount++; }
-        }
-      }
-    });
-    setAvgTemperature(tCount ? tSum / tCount : 0);
-    setAvgHumidity(hCount ? hSum / hCount : 0);
   };
 
   const getDeviceData = (device: SensorDevice) => {
@@ -352,6 +435,8 @@ const DashboardScreen: React.FC = () => {
               );
             })()}
 
+
+
             {/* Sensors */}
             {(() => {
               const binary = configuredDevices.filter(d => ['water', 'radar', 'door', 'security'].includes(d.type));
@@ -374,7 +459,8 @@ const DashboardScreen: React.FC = () => {
       <AcSettingsModal visible={acModalVisible} selectedAc={selectedAc} onClose={closeAcSettings} />
       <TempHumidityDetailsModal
         visible={tempHumidityModalVisible}
-        tempHumidityDevices={configuredDevices.filter(d => d.type === 'temp_humidity')}
+        temperatureSensors={storedDevices?.temperatureSensors || []}
+        humiditySensors={storedDevices?.humiditySensors || []}
         sensorData={haData.sensorData}
         onClose={() => setTempHumidityModalVisible(false)}
       />

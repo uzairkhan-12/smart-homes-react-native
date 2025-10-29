@@ -4,7 +4,7 @@
     "slug": "primewave",
     "version": "1.0.0",
     "orientation": "landscape",
-    "icon": "./assets/images/whitelogo.png",
+    "icon": "./assets/images/primewave.png",
     "scheme": "primewave",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -17,22 +17,23 @@
       "package": "com.uzairkhan12.primewave",
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
-        "foregroundImage": "./assets/images/whitelogo.png"
+        "foregroundImage": "./assets/images/primewave.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "screenOrientation": "landscape"
+      "usesCleartextTraffic": true
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/whitelogo.png"
+      "favicon": "./assets/images/primewave.png"
     },
     "plugins": [
       "expo-router",
+      "./plugins/with-network-security-config.js",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/whitelogo.png",
+          "image": "./assets/images/primewave.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",

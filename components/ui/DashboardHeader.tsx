@@ -142,6 +142,12 @@ export default function DashboardHeader({
       fontWeight: '600',
       color: isDark ? '#ffffff' : '#1a1a1a',
     },
+    statSubtext: {
+      fontSize: 10,
+      fontWeight: '400',
+      color: isDark ? '#9ca3af' : '#6b7280',
+      marginTop: -2,
+    },
     connectionIndicator: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -197,7 +203,7 @@ export default function DashboardHeader({
           </TouchableOpacity>
         )}
 
-        {/* Temp & Humidity inline */}
+        {/* Temp & Humidity inline - 12h averages */}
         <TouchableOpacity
           onPress={onTempHumidityDetailsPress}
           style={{ flexDirection: 'row', alignItems: 'center' }}
@@ -209,9 +215,12 @@ export default function DashboardHeader({
               size={18}
               color={isDark ? '#f59e0b' : '#f97316'}
             />
-            <Text style={dynamicStyles.statValue}>
-              {avgTemperature ? `${avgTemperature.toFixed(1)}°C` : '--°'}
-            </Text>
+            <View>
+              <Text style={dynamicStyles.statValue}>
+                {avgTemperature ? `${avgTemperature.toFixed(1)}°C` : '--°'}
+              </Text>
+              <Text style={dynamicStyles.statSubtext}>12h avg</Text>
+            </View>
           </View>
 
           <View style={dynamicStyles.statItem}>
@@ -220,9 +229,12 @@ export default function DashboardHeader({
               size={18}
               color={isDark ? '#3b82f6' : '#2563eb'}
             />
-            <Text style={dynamicStyles.statValue}>
-              {avgHumidity ? `${avgHumidity.toFixed(1)}%` : '--%'}
-            </Text>
+            <View>
+              <Text style={dynamicStyles.statValue}>
+                {avgHumidity ? `${avgHumidity.toFixed(1)}%` : '--%'}
+              </Text>
+              <Text style={dynamicStyles.statSubtext}>12h avg</Text>
+            </View>
           </View>
         </TouchableOpacity>
 

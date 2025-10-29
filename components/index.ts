@@ -4,6 +4,8 @@ export { default as BinarySensorCard } from './DeviceCards/BinarySensorCard';
 export { default as CameraCard } from './DeviceCards/CameraCard';
 export { default as LightCard } from './DeviceCards/LightCard';
 export { default as TempHumidityCard } from './DeviceCards/TempHumidityCard';
+export { default as TemperatureCard } from './DeviceCards/TemperatureCard';
+export { default as HumidityCard } from './DeviceCards/HumidityCard';
 
 // Modals
 export { default as AcSettingsModal } from './Modals/AcSettingsModal';

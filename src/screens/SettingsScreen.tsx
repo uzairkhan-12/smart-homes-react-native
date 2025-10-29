@@ -452,6 +452,8 @@ const SettingsScreen: React.FC = () => {
     waterSensors: true,
     radarSensors: true,
     tempHumiditySensors: true,
+    temperatureSensors: true,
+    humiditySensors: true,
     doorSensor: true,
     lights: true,
     cameras: true,
@@ -557,6 +559,8 @@ const getSectionIcon = (sectionType: string): any => {
     waterSensors: 'water-outline',
     radarSensors: 'scan-outline',
     tempHumiditySensors: 'thermometer-outline',
+    temperatureSensors: 'thermometer-outline',
+    humiditySensors: 'water-outline',
     doorSensor: 'lock-closed-outline',
     lights: 'bulb-outline',
     cameras: 'camera-outline',
@@ -1003,7 +1007,8 @@ const getSectionIcon = (sectionType: string): any => {
             {/* Device Sections */}
             {renderDeviceSection('Water Sensors', devices.waterSensors, 'waterSensors')}
             {renderDeviceSection('Radar Sensors', devices.radarSensors, 'radarSensors')}
-            {renderDeviceSection('Temperature & Humidity', devices.tempHumiditySensors, 'tempHumiditySensors')}
+            {renderDeviceSection('Temperature Sensors', devices.temperatureSensors || [], 'temperatureSensors')}
+            {renderDeviceSection('Humidity Sensors', devices.humiditySensors || [], 'humiditySensors')}
             {renderSingleDeviceSection('Door Sensor', devices.doorSensor, 'doorSensor')}
             {renderDeviceSection('Lights', devices.lights, 'lights')}
             {renderDeviceSection('Cameras', devices.cameras as any, 'cameras')}

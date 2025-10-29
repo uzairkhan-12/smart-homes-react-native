@@ -14,47 +14,24 @@ import { SensorData, SensorDevice } from '../../types';
 interface TempHumidityDetailsModalProps {
   visible: boolean;
   onClose: () => void;
-  tempHumidityDevices: SensorDevice[];
+  temperatureSensors: SensorDevice[];
+  humiditySensors: SensorDevice[];
   sensorData: { [key: string]: SensorData };
 }
 
 export default function TempHumidityDetailsModal({
   visible,
   onClose,
-  tempHumidityDevices,
+  temperatureSensors,
+  humiditySensors,
   sensorData
 }: TempHumidityDetailsModalProps) {
   const { isDark } = useTheme();
 
-  const getTempHumidityData = (device: SensorDevice) => {
-    // Check if this device has temperature data
-    const tempData = sensorData[device.entity];
-    let humidityData = null;
-
-    // Try to find matching humidity sensor
-    if (device.entity.includes('temperature')) {
-      const humidityEntity = device.entity.replace('temperature', 'humidity');
-      humidityData = sensorData[humidityEntity];
-    } else if (device.entity.includes('temp')) {
-      const humidityEntity = device.entity.replace('temp', 'humidity');
-      humidityData = sensorData[humidityEntity];
-    }
-
-    return {
-      temperature: tempData,
-      humidity: humidityData
-    };
-  };
-
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
+  const getSensorData = (device: SensorDevice) => {
+    // Only return data if the sensor entity has real data
+    const data = sensorData[device.entity];
+    return data || null;
   };
 
   const getTemperatureColor = (temp: number) => {
@@ -72,8 +49,18 @@ export default function TempHumidityDetailsModal({
     return '#3b82f6'; // Too humid - Blue
   };
 
-  const renderSensorCard = (device: SensorDevice) => {
-    const { temperature, humidity } = getTempHumidityData(device);
+  const renderTemperatureSensor = (device: SensorDevice) => {
+    const data = getSensorData(device);
+    
+    // Only render if we have real data
+    if (!data || !data.new_state) {
+      return null;
+    }
+    
+    const tempValue = parseFloat(data.new_state);
+    if (isNaN(tempValue)) {
+      return null;
+    }
     
     return (
       <View key={device.id} style={[styles.sensorCard, isDark && styles.sensorCardDark]}>
@@ -96,75 +83,77 @@ export default function TempHumidityDetailsModal({
         </View>
 
         <View style={styles.dataContainer}>
-          {/* Temperature */}
-          {temperature && (
-            <View style={[styles.dataItem, isDark && styles.dataItemDark]}>
-              <View style={styles.dataHeader}>
-                <Ionicons 
-                  name="thermometer-outline" 
-                  size={16} 
-                  color={getTemperatureColor(parseFloat(temperature.new_state))} 
-                />
-                <Text style={[styles.dataLabel, isDark && styles.textDark]}>Temperature</Text>
-              </View>
-              <Text style={[
-                styles.dataValue,
-                { color: getTemperatureColor(parseFloat(temperature.new_state)) }
-              ]}>
-                {temperature.new_state}°C
-              </Text>
-              <Text style={[styles.dataTimestamp, isDark && styles.textSecondaryDark]}>
-                Updated: {formatTimestamp(temperature.timestamp)}
-              </Text>
-              {temperature.old_state !== temperature.new_state && (
-                <Text style={[styles.dataChange, isDark && styles.textSecondaryDark]}>
-                  Previous: {temperature.old_state}°C
-                </Text>
-              )}
-            </View>
-          )}
-
-          {/* Humidity */}
-          {humidity && (
-            <View style={[styles.dataItem, isDark && styles.dataItemDark]}>
-              <View style={styles.dataHeader}>
-                <Ionicons 
-                  name="water-outline" 
-                  size={16} 
-                  color={getHumidityColor(parseFloat(humidity.new_state))} 
-                />
-                <Text style={[styles.dataLabel, isDark && styles.textDark]}>Humidity</Text>
-              </View>
-              <Text style={[
-                styles.dataValue,
-                { color: getHumidityColor(parseFloat(humidity.new_state)) }
-              ]}>
-                {humidity.new_state}%
-              </Text>
-              <Text style={[styles.dataTimestamp, isDark && styles.textSecondaryDark]}>
-                Updated: {formatTimestamp(humidity.timestamp)}
-              </Text>
-              {humidity.old_state !== humidity.new_state && (
-                <Text style={[styles.dataChange, isDark && styles.textSecondaryDark]}>
-                  Previous: {humidity.old_state}%
-                </Text>
-              )}
-            </View>
-          )}
-
-          {/* No data message */}
-          {!temperature && !humidity && (
-            <View style={styles.noDataContainer}>
+          <View style={[styles.dataItem, isDark && styles.dataItemDark]}>
+            <View style={styles.dataHeader}>
               <Ionicons 
-                name="warning-outline" 
-                size={24} 
-                color={isDark ? '#f59e0b' : '#f97316'} 
+                name="thermometer-outline" 
+                size={16} 
+                color={getTemperatureColor(tempValue)} 
               />
-              <Text style={[styles.noDataText, isDark && styles.textSecondaryDark]}>
-                No sensor data available
-              </Text>
+              <Text style={[styles.dataLabel, isDark && styles.textDark]}>Current Temperature</Text>
             </View>
-          )}
+            <Text style={[
+              styles.dataValue,
+              { color: getTemperatureColor(tempValue) }
+            ]}>
+              {data.new_state}°C
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  const renderHumiditySensor = (device: SensorDevice) => {
+    const data = getSensorData(device);
+    
+    // Only render if we have real data
+    if (!data || !data.new_state) {
+      return null;
+    }
+    
+    const humidityValue = parseFloat(data.new_state);
+    if (isNaN(humidityValue)) {
+      return null;
+    }
+    
+    return (
+      <View key={device.id} style={[styles.sensorCard, isDark && styles.sensorCardDark]}>
+        <View style={styles.sensorHeader}>
+          <View style={[styles.sensorIconContainer, isDark && styles.sensorIconContainerDark]}>
+            <Ionicons 
+              name="water-outline" 
+              size={20} 
+              color={isDark ? '#3b82f6' : '#1e40af'} 
+            />
+          </View>
+          <View style={styles.sensorInfo}>
+            <Text style={[styles.sensorName, isDark && styles.textDark]} numberOfLines={1}>
+              {device.name}
+            </Text>
+            <Text style={[styles.sensorEntity, isDark && styles.textSecondaryDark]} numberOfLines={1}>
+              {device.entity}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.dataContainer}>
+          <View style={[styles.dataItem, isDark && styles.dataItemDark]}>
+            <View style={styles.dataHeader}>
+              <Ionicons 
+                name="water-outline" 
+                size={16} 
+                color={getHumidityColor(humidityValue)} 
+              />
+              <Text style={[styles.dataLabel, isDark && styles.textDark]}>Current Humidity</Text>
+            </View>
+            <Text style={[
+              styles.dataValue,
+              { color: getHumidityColor(humidityValue) }
+            ]}>
+              {data.new_state}%
+            </Text>
+          </View>
         </View>
       </View>
     );
@@ -194,7 +183,7 @@ export default function TempHumidityDetailsModal({
                   Temperature & Humidity
                 </Text>
                 <Text style={[styles.headerSubtitle, isDark && styles.textSecondaryDark]}>
-                  {tempHumidityDevices.length} sensor{tempHumidityDevices.length !== 1 ? 's' : ''}
+                  {temperatureSensors.length + humiditySensors.length} sensor{(temperatureSensors.length + humiditySensors.length) !== 1 ? 's' : ''}
                 </Text>
               </View>
             </View>
@@ -214,7 +203,7 @@ export default function TempHumidityDetailsModal({
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {tempHumidityDevices.length === 0 ? (
+          {(temperatureSensors.length === 0 && humiditySensors.length === 0) ? (
             <View style={styles.emptyContainer}>
               <Ionicons 
                 name="thermometer-outline" 
@@ -222,14 +211,38 @@ export default function TempHumidityDetailsModal({
                 color={isDark ? '#666' : '#ccc'} 
               />
               <Text style={[styles.emptyTitle, isDark && styles.textDark]}>
-                No Temperature Sensors
+                No Temperature/Humidity Sensors
               </Text>
               <Text style={[styles.emptyMessage, isDark && styles.textSecondaryDark]}>
-                Configure temperature and humidity sensors in Settings to see detailed readings here.
+                Configure temperature and humidity sensors in Settings to see readings here.
               </Text>
             </View>
           ) : (
-            tempHumidityDevices.map(device => renderSensorCard(device))
+            <>
+              {/* Temperature Sensors */}
+              {temperatureSensors.map(device => renderTemperatureSensor(device)).filter(Boolean)}
+              
+              {/* Humidity Sensors */}
+              {humiditySensors.map(device => renderHumiditySensor(device)).filter(Boolean)}
+              
+              {/* Show message if no valid sensor data */}
+              {temperatureSensors.every(device => !getSensorData(device)?.new_state) && 
+               humiditySensors.every(device => !getSensorData(device)?.new_state) && (
+                <View style={styles.emptyContainer}>
+                  <Ionicons 
+                    name="warning-outline" 
+                    size={64} 
+                    color={isDark ? '#f59e0b' : '#f97316'} 
+                  />
+                  <Text style={[styles.emptyTitle, isDark && styles.textDark]}>
+                    No Sensor Data Available
+                  </Text>
+                  <Text style={[styles.emptyMessage, isDark && styles.textSecondaryDark]}>
+                    Check your Home Assistant connection and sensor configuration.
+                  </Text>
+                </View>
+              )}
+            </>
           )}
         </ScrollView>
       </View>
@@ -384,26 +397,6 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 8,
-  },
-  dataTimestamp: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginBottom: 4,
-  },
-  dataChange: {
-    fontSize: 12,
-    color: '#6b7280',
-    fontStyle: 'italic',
-  },
-  noDataContainer: {
-    alignItems: 'center',
-    padding: 20,
-  },
-  noDataText: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginTop: 8,
-    textAlign: 'center',
   },
   emptyContainer: {
     flex: 1,

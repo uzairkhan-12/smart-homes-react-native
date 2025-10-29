@@ -16,6 +16,21 @@ export interface HAApiEntityState {
   };
 }
 
+export interface HAHistoryState {
+  entity_id: string;
+  state: string;
+  attributes: any;
+  last_changed: string;
+  last_updated: string;
+}
+
+export interface HistoricalAverage {
+  temperature: number;
+  humidity: number;
+  temperatureCount: number;
+  humidityCount: number;
+}
+
 export class HomeAssistantApiService {
   private static instance: HomeAssistantApiService;
   
@@ -237,6 +252,100 @@ export class HomeAssistantApiService {
     } catch (error) {
       console.warn('❌ Home Assistant API connection test failed:', error);
       return false;
+    }
+  }
+
+  // Fetch historical data for an entity
+  async fetchEntityHistory(entityId: string, startTime: string): Promise<HAHistoryState[]> {
+    try {
+      const authHeader = await homeAssistantConfigService.getAuthHeader();
+      const apiUrl = await homeAssistantConfigService.getApiUrl();
+      
+      const historyUrl = `${apiUrl}/history/period/${startTime}?filter_entity_id=${entityId}`;
+      
+      const response = await fetchWithTimeout(historyUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000, // 10 second timeout for history
+      });
+
+      if (response.ok) {
+        const data: HAHistoryState[][] = await response.json();
+        // History API returns array of arrays, we want the first array (our entity)
+        return data[0] || [];
+      } else {
+        console.warn(`Failed to fetch history for ${entityId}: ${response.status} ${response.statusText}`);
+        return [];
+      }
+    } catch (error) {
+      console.warn(`Error fetching history for ${entityId}:`, error);
+      return [];
+    }
+  }
+
+  // Calculate 12-hour averages for temperature and humidity sensors
+  async getTwelveHourAverages(temperatureSensors: any[], humiditySensors: any[]): Promise<HistoricalAverage> {
+    try {
+      // Calculate start time (12 hours ago)
+      const startTime = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+      
+      let tempSum = 0;
+      let tempCount = 0;
+      let humiditySum = 0;
+      let humidityCount = 0;
+
+      // Fetch temperature history
+      for (const sensor of temperatureSensors) {
+        if (sensor.entity && sensor.entity.trim() !== '') {
+          console.log(`📊 Fetching 12h history for temperature sensor: ${sensor.entity}`);
+          const history = await this.fetchEntityHistory(sensor.entity, startTime);
+          
+          for (const state of history) {
+            const value = parseFloat(state.state);
+            if (!isNaN(value)) {
+              tempSum += value;
+              tempCount++;
+            }
+          }
+        }
+      }
+
+      // Fetch humidity history
+      for (const sensor of humiditySensors) {
+        if (sensor.entity && sensor.entity.trim() !== '') {
+          console.log(`📊 Fetching 12h history for humidity sensor: ${sensor.entity}`);
+          const history = await this.fetchEntityHistory(sensor.entity, startTime);
+          
+          for (const state of history) {
+            const value = parseFloat(state.state);
+            if (!isNaN(value)) {
+              humiditySum += value;
+              humidityCount++;
+            }
+          }
+        }
+      }
+
+      // Also check temp_humidity sensors for backward compatibility
+      console.log(`📊 Processed ${tempCount} temperature readings and ${humidityCount} humidity readings from last 12 hours`);
+
+      return {
+        temperature: tempCount > 0 ? tempSum / tempCount : 0,
+        humidity: humidityCount > 0 ? humiditySum / humidityCount : 0,
+        temperatureCount: tempCount,
+        humidityCount: humidityCount
+      };
+    } catch (error) {
+      console.error('Error calculating 12-hour averages:', error);
+      return {
+        temperature: 0,
+        humidity: 0,
+        temperatureCount: 0,
+        humidityCount: 0
+      };
     }
   }
 }
