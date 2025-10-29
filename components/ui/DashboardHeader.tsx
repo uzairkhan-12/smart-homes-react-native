@@ -10,12 +10,14 @@ interface DashboardHeaderProps {
   avgTemperature?: number;
   avgHumidity?: number;
   onTempHumidityDetailsPress?: () => void;
+  isConnected?: boolean;
 }
 
 export default function DashboardHeader({
   avgTemperature,
   avgHumidity,
   onTempHumidityDetailsPress,
+  isConnected = false,
 }: DashboardHeaderProps) {
   const { logout, hasAdminAccess } = useAuth();
   const { theme, setTheme, isDark } = useTheme();
@@ -140,6 +142,25 @@ export default function DashboardHeader({
       fontWeight: '600',
       color: isDark ? '#ffffff' : '#1a1a1a',
     },
+    connectionIndicator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      backgroundColor: isDark ? '#1f2937' : '#f3f4f6',
+      borderRadius: 12,
+    },
+    connectionDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    connectionText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: isDark ? '#ffffff' : '#1a1a1a',
+    },
   });
 
   return (
@@ -204,6 +225,19 @@ export default function DashboardHeader({
             </Text>
           </View>
         </TouchableOpacity>
+
+        {/* WebSocket Connection Status */}
+        <View style={dynamicStyles.connectionIndicator}>
+          <View
+            style={[
+              dynamicStyles.connectionDot,
+              { backgroundColor: isConnected ? '#10b981' : '#ef4444' }
+            ]}
+          />
+          <Text style={dynamicStyles.connectionText}>
+            {isConnected ? 'Live' : 'Offline'}
+          </Text>
+        </View>
 
         {/* Theme Toggle */}
         <TouchableOpacity

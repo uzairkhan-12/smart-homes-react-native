@@ -232,6 +232,7 @@ const DashboardScreen: React.FC = () => {
         avgTemperature={avgTemperature}
         avgHumidity={avgHumidity}
         onTempHumidityDetailsPress={() => setTempHumidityModalVisible(true)}
+        isConnected={isConnected}
       />
 
       <View style={styles.mainContent}>
