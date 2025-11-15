@@ -1,6 +1,7 @@
 import { AppState, AppStateStatus } from 'react-native';
 import { BinarySensorData, ClimateData, LightData, SensorData } from '../../types';
 import { fetchWithTimeout } from '../utils/fetch';
+import { WEBSOCKET_URL } from '../config/api';
 import { homeAssistantApiService } from './HomeAssistantApiService';
 import { homeAssistantConfigService } from './HomeAssistantConfigService';
 
@@ -24,7 +25,8 @@ class HomeAssistantService {
   private websocket: WebSocket | null = null;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
-  private reconnectDelay = 5000; // 5 seconds as requested
+  private reconnectDelay = 5000; // 5 seconds for ongoing reconnections
+  private initialReconnectDelay = 500; // 500ms for initial attempts (faster)
   private listeners: ((data: HomeAssistantData) => void)[] = [];
   private reconnectTimer: number | null = null;
   private isAppInBackground = false;
@@ -585,14 +587,9 @@ class HomeAssistantService {
         return;
       }
 
-      // Get WebSocket URL from configuration service
-      const websocketUrl = await homeAssistantConfigService.getWebSocketUrl();
-      if (!websocketUrl || websocketUrl.includes('undefined')) {
-        console.error('❌ Invalid WebSocket URL:', websocketUrl);
-        return;
-      }
-
-      console.log('🔌 Connecting to WebSocket:', websocketUrl.replace(/access_token=[^&]+/, 'access_token=***'));
+      // Use centralized WebSocket URL from api.ts
+      const websocketUrl = WEBSOCKET_URL;
+      console.log('🔌 Connecting to WebSocket:', websocketUrl);
       this.websocket = new WebSocket(websocketUrl);
 
       this.websocket.onopen = () => {
@@ -689,6 +686,8 @@ class HomeAssistantService {
 
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       console.error('🔄 Max reconnection attempts reached. Stopping reconnection.');
+      // Notify listeners that we've given up reconnecting
+      this.notifyListeners();
       return;
     }
 
@@ -700,12 +699,16 @@ class HomeAssistantService {
       clearTimeout(this.reconnectTimer);
     }
     
+    // Use shorter delay for initial connection attempts
+    const delay = this.reconnectAttempts <= 2 ? this.initialReconnectDelay : this.reconnectDelay;
+    console.log(`⏱️ Next reconnection attempt in ${delay}ms`);
+    
     this.reconnectTimer = setTimeout(async () => {
       try {
         // Validate configuration before attempting reconnection
         const config = await homeAssistantConfigService.getConfig();
-        if (!config?.websocketUrl || !config?.token) {
-          console.error('❌ Cannot reconnect WebSocket: Invalid configuration');
+        if (!config?.token) {
+          console.error('❌ Cannot reconnect WebSocket: No token configured');
           return;
         }
         
@@ -713,7 +716,7 @@ class HomeAssistantService {
       } catch (error) {
         console.error('Failed to reconnect WebSocket:', error);
       }
-    }, this.reconnectDelay) as any;
+    }, delay) as any;
   }
 
   // Get current data
@@ -755,6 +758,25 @@ class HomeAssistantService {
   // Check connection status
   isConnected(): boolean {
     return this.websocket?.readyState === WebSocket.OPEN;
+  }
+
+  // Check if currently trying to connect
+  isConnecting(): boolean {
+    return this.websocket?.readyState === WebSocket.CONNECTING || this.reconnectTimer !== null;
+  }
+
+  // Check if connection attempts have been exhausted
+  hasExhaustedReconnectionAttempts(): boolean {
+    return this.reconnectAttempts >= this.maxReconnectAttempts;
+  }
+
+  // Reset reconnection attempts (useful for manual refresh)
+  resetReconnectionAttempts(): void {
+    this.reconnectAttempts = 0;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
   }
 
   // Public method to refresh connections (can be called by camera components)

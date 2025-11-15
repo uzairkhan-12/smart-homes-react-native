@@ -1,10 +1,14 @@
 // API Configuration - Using FastAPI Backend for all operations
 export const API_BASE_URL = "http://192.168.100.95:3040/api";
 
+// WebSocket Configuration - Centralized WebSocket URL
+export const WEBSOCKET_URL = "ws://192.168.100.95:3040/api/ws/entities_live";
+
 // Backend Configuration - Handles all Home Assistant operations
 export const BACKEND_CONFIG = {
   BASE_URL: "http://192.168.100.95:3040",
   API_URL: "http://192.168.100.95:3040/api",
+  WEBSOCKET_URL: WEBSOCKET_URL,
   ENDPOINTS: {
     // Home Assistant control endpoints (full paths from base URL)
     LIGHT_TOGGLE: "/api/ha/service/light_toggle",

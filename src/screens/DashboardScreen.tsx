@@ -15,7 +15,7 @@ import { getColors } from '@/constants/colors';
 import { useTheme } from '@/context/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   AppState,
@@ -57,8 +57,9 @@ const DashboardScreen: React.FC = () => {
     lightData: {},
     sensorData: {}
   });
-  const [isConnected, setIsConnected] = useState(false);
+  const [connectionState, setConnectionState] = useState<'loading' | 'connected' | 'offline'>('loading');
   const [showReloadButton, setShowReloadButton] = useState(false);
+  const isInitialConnectionRef = useRef(true);
 
   // Modals
   const [acModalVisible, setAcModalVisible] = useState(false);
@@ -90,18 +91,83 @@ const DashboardScreen: React.FC = () => {
   useEffect(() => {
     const unsubscribe = homeAssistantService.subscribe((data: HomeAssistantData) => {
       setHaData(data);
-      setIsConnected(homeAssistantService.isConnected());
+      // Only update connection state if we're not in initial loading phase
+      if (!isInitialConnectionRef.current) {
+        setConnectionState(homeAssistantService.isConnected() ? 'connected' : 'offline');
+      }
     });
+    
+    // Start connecting if not already connected
     if (!homeAssistantService.isConnected()) {
-      homeAssistantService.connectWebSocket().catch(console.error);
-    } else setIsConnected(true);
+      console.log('🔄 Starting initial WebSocket connection...');
+      setConnectionState('loading');
+      homeAssistantService.connectWebSocket()
+        .then(() => {
+          console.log('✅ Initial connection attempt completed');
+          // Wait a bit longer to allow for potential reconnection attempts
+          setTimeout(() => {
+            isInitialConnectionRef.current = false;
+            const isConnected = homeAssistantService.isConnected();
+            const isConnecting = homeAssistantService.isConnecting();
+            console.log('🔍 Connection status:', { isConnected, isConnecting });
+            
+            // If still connecting, keep loading state, otherwise set final state
+            if (isConnecting && !isConnected) {
+              setConnectionState('loading');
+            } else {
+              setConnectionState(isConnected ? 'connected' : 'offline');
+            }
+          }, 1500); // Reduced timeout for faster feedback
+          
+          // Fallback timeout - force offline after 10 seconds if still not connected
+          setTimeout(() => {
+            if (!homeAssistantService.isConnected()) {
+              console.log('🔄 10-second timeout reached, forcing offline state');
+              isInitialConnectionRef.current = false;
+              setConnectionState('offline');
+            }
+          }, 10000);
+        })
+        .catch((error) => {
+          console.log('❌ Initial connection failed:', error);
+          setTimeout(() => {
+            isInitialConnectionRef.current = false;
+            setConnectionState('offline');
+          }, 1000);
+        });
+    } else {
+      console.log('✅ Already connected to WebSocket');
+      isInitialConnectionRef.current = false;
+      setConnectionState('connected');
+    }
+    
     return () => unsubscribe();
   }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setIsConnected(homeAssistantService.isConnected());
-    }, 5000);
+      // Skip periodic updates during initial connection phase
+      if (isInitialConnectionRef.current) {
+        return;
+      }
+      
+      const isConnected = homeAssistantService.isConnected();
+      const isConnecting = homeAssistantService.isConnecting();
+      
+      setConnectionState(prev => {
+        // If reconnection attempts exhausted, definitely show offline
+        if (homeAssistantService.hasExhaustedReconnectionAttempts()) {
+          return 'offline';
+        }
+        // If currently connecting, show loading state
+        if (isConnecting && !isConnected) {
+          return 'loading';
+        }
+        // Otherwise show connected/offline based on actual state
+        const newState = isConnected ? 'connected' : 'offline';
+        return prev !== newState ? newState : prev;
+      });
+    }, 2000); // More frequent checks for better responsiveness
     return () => clearInterval(interval);
   }, []);
 
@@ -364,7 +430,28 @@ const DashboardScreen: React.FC = () => {
 
   const onRefresh = async () => {
     setRefreshing(true);
+    setConnectionState('loading');
+    
+    // Reset reconnection attempts to allow fresh connection attempt
+    homeAssistantService.resetReconnectionAttempts();
+    
+    // Reload devices and reconnect WebSocket if needed
     await loadConfiguredDevices();
+    
+    if (!homeAssistantService.isConnected()) {
+      homeAssistantService.connectWebSocket()
+        .then(() => {
+          setTimeout(() => {
+            setConnectionState(homeAssistantService.isConnected() ? 'connected' : 'offline');
+          }, 100);
+        })
+        .catch(() => {
+          setConnectionState('offline');
+        });
+    } else {
+      setConnectionState('connected');
+    }
+    
     setRefreshing(false);
   };
 
@@ -405,7 +492,7 @@ const DashboardScreen: React.FC = () => {
         avgHumidity={avgHumidity}
         onTemperaturePress={() => setTemperatureModalVisible(true)}
         onHumidityPress={() => setHumidityModalVisible(true)}
-        isConnected={isConnected}
+        connectionState={connectionState}
       />
 
       <View style={styles.mainContent}>

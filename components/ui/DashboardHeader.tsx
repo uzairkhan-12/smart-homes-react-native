@@ -6,12 +6,12 @@ import React, { useEffect, useState } from 'react';
 import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-interface DashboardHeaderProps {
+export interface DashboardHeaderProps {
   avgTemperature?: number;
   avgHumidity?: number;
   onTemperaturePress?: () => void;
   onHumidityPress?: () => void;
-  isConnected?: boolean;
+  connectionState?: 'loading' | 'connected' | 'offline';
 }
 
 export default function DashboardHeader({
@@ -19,7 +19,7 @@ export default function DashboardHeader({
   avgHumidity,
   onTemperaturePress,
   onHumidityPress,
-  isConnected = false,
+  connectionState = 'offline',
 }: DashboardHeaderProps) {
   const { logout, hasAdminAccess } = useAuth();
   const { theme, setTheme, isDark } = useTheme();
@@ -248,11 +248,16 @@ export default function DashboardHeader({
           <View
             style={[
               dynamicStyles.connectionDot,
-              { backgroundColor: isConnected ? '#10b981' : '#ef4444' }
+              { 
+                backgroundColor: 
+                  connectionState === 'connected' ? '#10b981' : 
+                  connectionState === 'loading' ? '#f59e0b' : '#ef4444' 
+              }
             ]}
           />
           <Text style={dynamicStyles.connectionText}>
-            {isConnected ? 'Live' : 'Offline'}
+            {connectionState === 'connected' ? 'Live' : 
+             connectionState === 'loading' ? 'Loading' : 'Offline'}
           </Text>
         </View>
 

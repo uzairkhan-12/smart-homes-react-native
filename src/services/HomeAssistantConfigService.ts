@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { HA_DIRECT_CONFIG } from '../config/api';
+import { HA_DIRECT_CONFIG, WEBSOCKET_URL } from '../config/api';
 
 export interface HomeAssistantConfig {
   httpApiUrl: string;      // HTTP API endpoint for REST calls
@@ -14,10 +14,10 @@ class HomeAssistantConfigService {
   private static instance: HomeAssistantConfigService;
   private static readonly CONFIG_KEY = 'home_assistant_config';
   
-  // Default configuration - using direct Home Assistant API (no proxy)
+  // Default configuration - using centralized WebSocket URL
   private defaultConfig: HomeAssistantConfig = {
     httpApiUrl: HA_DIRECT_CONFIG.API_URL, // Direct HA HTTP API
-    websocketUrl: 'ws://192.168.100.95:3040/api/ws/entities_live', // WebSocket endpoint
+    websocketUrl: WEBSOCKET_URL, // Centralized WebSocket endpoint
     token: HA_DIRECT_CONFIG.TOKEN, // Use token from config
     useProxy: false, // No proxy needed with backend
     baseUrl: HA_DIRECT_CONFIG.API_URL // Legacy compatibility

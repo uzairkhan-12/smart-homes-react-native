@@ -14,6 +14,7 @@ import {
   useColorScheme,
 } from 'react-native';
 import { homeAssistantConfigService } from '../../src/services/HomeAssistantConfigService';
+import { WEBSOCKET_URL } from '../../src/config/api';
 
 interface HomeAssistantConfigModalProps {
   visible: boolean;
@@ -31,7 +32,6 @@ const HomeAssistantConfigModal: React.FC<HomeAssistantConfigModalProps> = ({
   
   // Configuration fields
   const [httpApiUrl, setHttpApiUrl] = useState('http://192.168.100.60:8123/api');
-  const [websocketUrl, setWebsocketUrl] = useState('ws://192.168.100.95:3040/api/ws/entities_live');
   const [token, setToken] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
@@ -47,7 +47,6 @@ const HomeAssistantConfigModal: React.FC<HomeAssistantConfigModalProps> = ({
     try {
       const config = await homeAssistantConfigService.getConfig();
       setHttpApiUrl(config.httpApiUrl || config.baseUrl || 'http://192.168.100.60:8123/api');
-      setWebsocketUrl(config.websocketUrl);
       setToken(config.token);
       
       // Check current connection status
@@ -69,7 +68,7 @@ const HomeAssistantConfigModal: React.FC<HomeAssistantConfigModalProps> = ({
       // Temporarily save config for testing
       await homeAssistantConfigService.saveConfig({ 
         httpApiUrl, 
-        websocketUrl, 
+        websocketUrl: WEBSOCKET_URL, 
         token 
       });
       
@@ -98,7 +97,7 @@ const HomeAssistantConfigModal: React.FC<HomeAssistantConfigModalProps> = ({
     try {
       await homeAssistantConfigService.saveConfig({ 
         httpApiUrl, 
-        websocketUrl, 
+        websocketUrl: WEBSOCKET_URL, 
         token 
       });
       Alert.alert('Success', 'Home Assistant configuration saved!', [
@@ -124,7 +123,6 @@ const HomeAssistantConfigModal: React.FC<HomeAssistantConfigModalProps> = ({
             try {
               await homeAssistantConfigService.resetConfig();
               setHttpApiUrl('http://192.168.100.60:8123/api');
-              setWebsocketUrl('ws://192.168.100.95:3040/api/ws/entities_live');
               setToken('');
               setIsConnected(false);
               Alert.alert('Success', 'Configuration reset to defaults');
@@ -197,23 +195,23 @@ const HomeAssistantConfigModal: React.FC<HomeAssistantConfigModalProps> = ({
             </Text>
 
             <Text style={[styles.fieldLabel, {color: colors.text}]}>
-              WebSocket URL
+              WebSocket URL (Centralized)
             </Text>
             <TextInput
               style={[styles.textInput, {
                 borderColor: colors.border,
-                backgroundColor: colors.surfaceSecondary,
-                color: colors.text
+                backgroundColor: colors.surfaceSecondary + '80', // Semi-transparent to show it's read-only
+                color: colors.textSecondary
               }]}
-              value={websocketUrl}
-              onChangeText={setWebsocketUrl}
-              placeholder="ws://192.168.100.95:3040/api/ws/entities_live"
+              value={WEBSOCKET_URL}
+              editable={false}
+              placeholder={WEBSOCKET_URL}
               placeholderTextColor={colors.textSecondary}
               autoCapitalize="none"
               autoCorrect={false}
             />
             <Text style={[styles.helpText, {color: colors.textSecondary}]}>
-              The WebSocket endpoint for real-time updates
+              WebSocket endpoint configured in api.ts (read-only)
             </Text>
 
             <Text style={[styles.fieldLabel, {color: colors.text}]}>
