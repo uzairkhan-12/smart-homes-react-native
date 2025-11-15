@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SensorDevice, StoredDevices } from '../types';
+import { HA_DIRECT_CONFIG } from '../config/api';
 
 interface User {
   id: string;
@@ -72,7 +73,7 @@ class DeviceStorageService {
           name: 'Front Door Camera',
           entity: '', // No camera entity - using direct stream URL
           type: 'camera',
-          stream_url: 'http://192.168.100.60:8123/api/camera_proxy_stream/camera.front_door',
+          stream_url: `${HA_DIRECT_CONFIG.BASE_URL}/api/camera_proxy_stream/camera.front_door`,
           motion_sensor: 'binary_sensor.frontdoor_1_motion',
           occupancy_sensor: 'binary_sensor.frontdoor_1_person_occupancy'
         } as SensorDevice,

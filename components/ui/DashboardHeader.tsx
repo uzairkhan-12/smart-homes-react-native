@@ -9,14 +9,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 interface DashboardHeaderProps {
   avgTemperature?: number;
   avgHumidity?: number;
-  onTempHumidityDetailsPress?: () => void;
+  onTemperaturePress?: () => void;
+  onHumidityPress?: () => void;
   isConnected?: boolean;
 }
 
 export default function DashboardHeader({
   avgTemperature,
   avgHumidity,
-  onTempHumidityDetailsPress,
+  onTemperaturePress,
+  onHumidityPress,
   isConnected = false,
 }: DashboardHeaderProps) {
   const { logout, hasAdminAccess } = useAuth();
@@ -203,38 +205,41 @@ export default function DashboardHeader({
           </TouchableOpacity>
         )}
 
-        {/* Temp & Humidity inline - 12h averages */}
+        {/* Temperature - 12h average */}
         <TouchableOpacity
-          onPress={onTempHumidityDetailsPress}
-          style={{ flexDirection: 'row', alignItems: 'center' }}
+          onPress={onTemperaturePress}
+          style={dynamicStyles.statItem}
           activeOpacity={0.8}
         >
-          <View style={dynamicStyles.statItem}>
-            <Ionicons
-              name="thermometer-outline"
-              size={18}
-              color={isDark ? '#f59e0b' : '#f97316'}
-            />
-            <View>
-              <Text style={dynamicStyles.statValue}>
-                {avgTemperature ? `${avgTemperature.toFixed(1)}°C` : '--°'}
-              </Text>
-              <Text style={dynamicStyles.statSubtext}>12h avg</Text>
-            </View>
+          <Ionicons
+            name="thermometer-outline"
+            size={18}
+            color={isDark ? '#f59e0b' : '#f97316'}
+          />
+          <View>
+            <Text style={dynamicStyles.statValue}>
+              {avgTemperature ? `${avgTemperature.toFixed(1)}°C` : '--°'}
+            </Text>
+            <Text style={dynamicStyles.statSubtext}>12h avg</Text>
           </View>
+        </TouchableOpacity>
 
-          <View style={dynamicStyles.statItem}>
-            <Ionicons
-              name="water-outline"
-              size={18}
-              color={isDark ? '#3b82f6' : '#2563eb'}
-            />
-            <View>
-              <Text style={dynamicStyles.statValue}>
-                {avgHumidity ? `${avgHumidity.toFixed(1)}%` : '--%'}
-              </Text>
-              <Text style={dynamicStyles.statSubtext}>12h avg</Text>
-            </View>
+        {/* Humidity - 12h average */}
+        <TouchableOpacity
+          onPress={onHumidityPress}
+          style={dynamicStyles.statItem}
+          activeOpacity={0.8}
+        >
+          <Ionicons
+            name="water-outline"
+            size={18}
+            color={isDark ? '#3b82f6' : '#2563eb'}
+          />
+          <View>
+            <Text style={dynamicStyles.statValue}>
+              {avgHumidity ? `${avgHumidity.toFixed(1)}%` : '--%'}
+            </Text>
+            <Text style={dynamicStyles.statSubtext}>12h avg</Text>
           </View>
         </TouchableOpacity>
 

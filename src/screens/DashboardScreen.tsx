@@ -9,7 +9,8 @@ import {
   
 } from '@/components';
 import DashboardHeader from '@/components/ui/DashboardHeader';
-import TempHumidityDetailsModal from '@/components/ui/TempHumidityDetailsModal';
+import TemperatureDetailsModal from '@/components/ui/TemperatureDetailsModal';
+import HumidityDetailsModal from '@/components/ui/HumidityDetailsModal';
 import { getColors } from '@/constants/colors';
 import { useTheme } from '@/context/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
@@ -19,6 +20,7 @@ import {
   Alert,
   AppState,
   AppStateStatus,
+  Image,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -32,6 +34,7 @@ import { BinarySensorData, ClimateData, LightData, SensorData, SensorDevice } fr
 import { deviceStorageService } from '../services/DeviceStorageService';
 import { HomeAssistantData, homeAssistantService } from '../services/HomeAssistantService';
 import { homeAssistantApiService } from '../services/HomeAssistantApiService';
+import { homeAssistantConfigService } from '../services/HomeAssistantConfigService';
 import { ensureCorrectCameraConfig } from '../utils/configurationFixer';
 
 const CONTAINER_PADDING = 4;
@@ -60,7 +63,8 @@ const DashboardScreen: React.FC = () => {
   // Modals
   const [acModalVisible, setAcModalVisible] = useState(false);
   const [selectedAc, setSelectedAc] = useState<SensorDevice | null>(null);
-  const [tempHumidityModalVisible, setTempHumidityModalVisible] = useState(false);
+  const [temperatureModalVisible, setTemperatureModalVisible] = useState(false);
+  const [humidityModalVisible, setHumidityModalVisible] = useState(false);
   const [sensorDetailsModalVisible, setSensorDetailsModalVisible] = useState(false);
   const [selectedSensor, setSelectedSensor] = useState<SensorDevice | null>(null);
   const [selectedSensorData, setSelectedSensorData] = useState<BinarySensorData | null>(null);
@@ -153,6 +157,13 @@ const DashboardScreen: React.FC = () => {
 
   const calculateAverages = async () => {
     try {
+      // Check if we have real-time WebSocket sensor data
+      if (haData.sensorData && Object.keys(haData.sensorData).length > 0) {
+        console.log('📊 Using real-time WebSocket data for averages...');
+        await calculateRealtimeAverages();
+        return;
+      }
+      
       console.log('📊 Calculating 12-hour averages from Home Assistant history...');
       
       // Get sensor configurations
@@ -180,6 +191,64 @@ const DashboardScreen: React.FC = () => {
     }
   };
 
+  // Calculate real-time averages from WebSocket sensor data
+  const calculateRealtimeAverages = async () => {
+    try {
+      // Get sensor configurations from storage
+      const devices = await deviceStorageService.loadDevices();
+      const { temperatureSensors = [], humiditySensors = [] } = devices;
+      
+      if (temperatureSensors.length === 0 && humiditySensors.length === 0) {
+        console.log('📊 No temperature/humidity sensors configured');
+        setAvgTemperature(0);
+        setAvgHumidity(0);
+        return;
+      }
+      
+      // Calculate temperature average from real-time WebSocket data
+      let tempSum = 0, tempCount = 0;
+      
+      temperatureSensors.forEach(sensor => {
+        if (sensor.entity && sensor.entity.trim() !== '') {
+          const sensorData = haData.sensorData[sensor.entity];
+          if (sensorData?.new_state) {
+            const value = parseFloat(sensorData.new_state);
+            if (!isNaN(value)) {
+              tempSum += value;
+              tempCount++;
+            }
+          }
+        }
+      });
+
+      // Calculate humidity average from real-time WebSocket data
+      let humiditySum = 0, humidityCount = 0;
+      
+      humiditySensors.forEach(sensor => {
+        if (sensor.entity && sensor.entity.trim() !== '') {
+          const sensorData = haData.sensorData[sensor.entity];
+          if (sensorData?.new_state) {
+            const value = parseFloat(sensorData.new_state);
+            if (!isNaN(value)) {
+              humiditySum += value;
+              humidityCount++;
+            }
+          }
+        }
+      });
+
+      // Set averages (rounded to 1 decimal place)
+      setAvgTemperature(tempCount > 0 ? Math.round((tempSum / tempCount) * 10) / 10 : 0);
+      setAvgHumidity(humidityCount > 0 ? Math.round((humiditySum / humidityCount) * 10) / 10 : 0);
+      
+      console.log(`📊 Real-time averages updated - Temp: ${tempCount > 0 ? (tempSum / tempCount).toFixed(1) : '0.0'}°C (${tempCount} sensors), Humidity: ${humidityCount > 0 ? (humiditySum / humidityCount).toFixed(1) : '0.0'}% (${humidityCount} sensors)`);
+    } catch (error) {
+      console.error('❌ Error calculating real-time averages:', error);
+      setAvgTemperature(0);
+      setAvgHumidity(0);
+    }
+  };
+
   // Fallback function for instant averages (in case historical data fails)
   const calculateInstantAverages = async () => {
     try {
@@ -201,14 +270,14 @@ const DashboardScreen: React.FC = () => {
       }
       
       // Get current Home Assistant data
-      const haData = await homeAssistantApiService.fetchConfiguredEntityStates(allEntityIds);
+      const fetchedData = await homeAssistantApiService.fetchConfiguredEntityStates(allEntityIds);
       
       // Calculate temperature average
       let tempSum = 0, tempCount = 0;
       
       temperatureSensors.forEach(sensor => {
         if (sensor.entity && sensor.entity.trim() !== '') {
-          const sensorData = haData.sensorData[sensor.entity];
+          const sensorData = fetchedData.sensorData[sensor.entity];
           if (sensorData?.new_state) {
             const value = parseFloat(sensorData.new_state);
             if (!isNaN(value)) {
@@ -224,7 +293,7 @@ const DashboardScreen: React.FC = () => {
       
       humiditySensors.forEach(sensor => {
         if (sensor.entity && sensor.entity.trim() !== '') {
-          const sensorData = haData.sensorData[sensor.entity];
+          const sensorData = fetchedData.sensorData[sensor.entity];
           if (sensorData?.new_state) {
             const value = parseFloat(sensorData.new_state);
             if (!isNaN(value)) {
@@ -304,7 +373,27 @@ const DashboardScreen: React.FC = () => {
   if (loading) {
     return (
       <View style={[styles.loadingContainer, isDarkTheme && styles.loadingContainerDark]}>
-        <Text style={[styles.loadingText, isDarkTheme && styles.textDark]}>Loading dashboard...</Text>
+        <View style={styles.loadingContent}>
+          <Image
+            source={
+              isDarkTheme
+                ? require('@/assets/images/whitelogo.png')
+                : require('@/assets/images/PMLogo.png')
+            }
+            style={styles.loadingLogo}
+          />
+          <Text style={[styles.loadingTitle, isDarkTheme && styles.loadingTitleDark]}>
+            Smart Home
+          </Text>
+          <Text style={[styles.loadingText, isDarkTheme && styles.loadingTextDark]}>
+            Loading dashboard...
+          </Text>
+          <View style={styles.loadingIndicator}>
+            <View style={[styles.loadingDot, isDarkTheme && styles.loadingDotDark]} />
+            <View style={[styles.loadingDot, isDarkTheme && styles.loadingDotDark]} />
+            <View style={[styles.loadingDot, isDarkTheme && styles.loadingDotDark]} />
+          </View>
+        </View>
       </View>
     );
   }
@@ -314,7 +403,8 @@ const DashboardScreen: React.FC = () => {
       <DashboardHeader
         avgTemperature={avgTemperature}
         avgHumidity={avgHumidity}
-        onTempHumidityDetailsPress={() => setTempHumidityModalVisible(true)}
+        onTemperaturePress={() => setTemperatureModalVisible(true)}
+        onHumidityPress={() => setHumidityModalVisible(true)}
         isConnected={isConnected}
       />
 
@@ -457,12 +547,17 @@ const DashboardScreen: React.FC = () => {
 
       {/* Modals */}
       <AcSettingsModal visible={acModalVisible} selectedAc={selectedAc} onClose={closeAcSettings} />
-      <TempHumidityDetailsModal
-        visible={tempHumidityModalVisible}
+      <TemperatureDetailsModal
+        visible={temperatureModalVisible}
         temperatureSensors={storedDevices?.temperatureSensors || []}
+        sensorData={haData.sensorData}
+        onClose={() => setTemperatureModalVisible(false)}
+      />
+      <HumidityDetailsModal
+        visible={humidityModalVisible}
         humiditySensors={storedDevices?.humiditySensors || []}
         sensorData={haData.sensorData}
-        onClose={() => setTempHumidityModalVisible(false)}
+        onClose={() => setHumidityModalVisible(false)}
       />
       <SensorDetailsModal
         visible={sensorDetailsModalVisible}
@@ -505,9 +600,55 @@ const styles = StyleSheet.create({
   camerasList: { paddingHorizontal: CONTAINER_PADDING, paddingVertical: 8 },
   cameraCardItem: { marginBottom: 10 },
   sensorsContainer: { marginBottom: 8, paddingHorizontal: CONTAINER_PADDING, marginTop: 4 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingContainer: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5'
+  },
   loadingContainerDark: { backgroundColor: '#121212' },
-  loadingText: { fontSize: 16, color: '#666' },
+  loadingContent: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingLogo: {
+    width: 100,
+    height: 100,
+    marginBottom: 20,
+    borderRadius: 20,
+    resizeMode: 'contain',
+  },
+  loadingTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 8,
+  },
+  loadingTitleDark: {
+    color: '#ffffff',
+  },
+  loadingText: { 
+    fontSize: 16, 
+    color: '#666',
+    marginBottom: 30,
+  },
+  loadingTextDark: {
+    color: '#9ca3af',
+  },
+  loadingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  loadingDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#007AFF',
+  },
+  loadingDotDark: {
+    backgroundColor: '#3b82f6',
+  },
   scrollContent: { paddingHorizontal: CONTAINER_PADDING, paddingVertical: 8, paddingBottom: 16 },
   emptyColumnContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
   emptyColumnIcon: { fontSize: 40, marginBottom: 12 },
