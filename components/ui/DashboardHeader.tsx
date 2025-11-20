@@ -105,7 +105,7 @@ export default function DashboardHeader({
       justifyContent: 'center',
     },
     timeText: {
-      fontSize: 28,
+      fontSize: 16,
       fontWeight: '700',
       color: isDark ? '#ffffff' : '#1a1a1a',
     },
@@ -184,8 +184,8 @@ export default function DashboardHeader({
           style={dynamicStyles.logoImage}
         />
         <View style={dynamicStyles.timeContainer}>
-          <Text style={dynamicStyles.timeText}>{formatTime(currentTime)}</Text>
-          <Text style={dynamicStyles.dateText}>{formatDate(currentTime)}</Text>
+          <Text style={dynamicStyles.timeText}>Binnale Data Center - Riyadh</Text>
+          <Text style={dynamicStyles.dateText}>{formatDate(currentTime)} • {formatTime(currentTime)}</Text>
         </View>
       </View>
 

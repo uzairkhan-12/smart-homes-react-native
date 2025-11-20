@@ -153,8 +153,9 @@ export default function LoginScreen() {
       marginBottom: 8,
     },
     subtitle: {
-      fontSize: 16,
-      color: colors.textSecondary,
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: colors.text,
       textAlign: 'center',
       marginBottom: 48,
     },
@@ -237,7 +238,7 @@ export default function LoginScreen() {
     poweredByText: {
   fontSize: 14,
   color: colors.textSecondary,
-  marginRight: 8,
+  marginRight: 20,
   fontWeight: '500',
 },
 footerLogo: {
@@ -295,9 +296,9 @@ footerContainer: {
                 resizeMode="contain"
               />
             </View>
-<Text style={styles.title}>Login to Binnale Data Center - Riyadh</Text>
+<Text style={styles.title}>Binnale Data Center - Riyadh</Text>
 
-            <Text style={styles.subtitle}>Enter your 6-digit access code</Text>
+            <Text style={styles.subtitle}>Login</Text>
 
             <View style={styles.codeContainer}>
               <View style={styles.inputGroup}>
