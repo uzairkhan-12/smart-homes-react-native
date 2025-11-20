@@ -208,9 +208,12 @@ const SensorStatusPanel: React.FC<SensorStatusPanelProps> = ({
     };
   };
 
-  // Group sensors by layout type
-  const regularSensors = sensors.filter(sensor => ['water', 'radar', 'motion', 'occupancy'].includes(sensor.type));
-  const doorSecuritySensors = sensors.filter(sensor => ['door', 'security'].includes(sensor.type));
+  // Group sensors by type for headings - first 4 water sensors are ceiling, rest are floor
+  const waterSensors = sensors.filter(sensor => sensor.type === 'water');
+  const ceilingSensors = waterSensors.slice(0, 4); // First 4 water sensors
+  const floorSensors = waterSensors.slice(4); // Rest of water sensors
+  const radarSensors = sensors.filter(sensor => sensor.type === 'radar');
+  const securitySensors = sensors.filter(sensor => sensor.type === 'security' || sensor.type === 'door');
 
   const renderSensorGroup = (sensorList: SensorDevice[], itemsPerRow: number) => {
     const sensorWidth = itemsPerRow === 4 ? '23%' : '48%';
@@ -262,6 +265,23 @@ const SensorStatusPanel: React.FC<SensorStatusPanelProps> = ({
     });
   };
 
+  const renderSensorSection = (sensorList: SensorDevice[], heading: string, itemsPerRow: number = 4) => {
+    if (sensorList.length === 0) return null;
+
+    return (
+      <View style={styles.sensorSection}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionHeading, isDark && styles.sectionHeadingDark]}>
+            {heading}
+          </Text>
+        </View>
+        <View style={styles.sensorsGrid}>
+          {renderSensorGroup(sensorList, itemsPerRow)}
+        </View>
+      </View>
+    );
+  };
+
   const statusMessage = getStatusMessage();
 
   return (
@@ -291,19 +311,34 @@ const SensorStatusPanel: React.FC<SensorStatusPanelProps> = ({
         </Text>
       </View>
       
-      {/* Regular Sensors - 4 per row */}
-      {regularSensors.length > 0 && (
-        <View style={styles.sensorsGrid}>
-          {renderSensorGroup(regularSensors, 4)}
+      {/* Main sensors container with entrance/back labels */}
+      <View style={styles.sectionWithLabels}>
+        {/* Entrance label */}
+        <View style={styles.verticalLabelContainer}>
+          <View style={[styles.verticalLabel, isDark && styles.verticalLabelDark]}>
+            <Text style={[styles.verticalLabelText, isDark && styles.verticalLabelTextDark]}>
+              E N T R A N C E
+            </Text>
+          </View>
         </View>
-      )}
-      
-      {/* Door & Security Sensors - 2 per row */}
-      {doorSecuritySensors.length > 0 && (
-        <View style={[styles.sensorsGrid, regularSensors.length > 0 && styles.separateSection]}>
-          {renderSensorGroup(doorSecuritySensors, 2)}
+        
+        {/* Sensors sections */}
+        <View style={styles.sensorsContainer}>
+          {renderSensorSection(ceilingSensors, "Ceiling Sensors")}
+          {renderSensorSection(floorSensors, "Floor Sensors")}
+          {renderSensorSection(radarSensors, "Radar Sensors")}
+          {renderSensorSection(securitySensors, "Security Sensors", 2)}
         </View>
-      )}
+        
+        {/* Interior label */}
+        <View style={styles.verticalLabelContainer}>
+          <View style={[styles.verticalLabel, isDark && styles.verticalLabelDark]}>
+            <Text style={[styles.verticalLabelText, isDark && styles.verticalLabelTextDark]}>
+              B A C K
+            </Text>
+          </View>
+        </View>
+      </View>
     </View>
   );
 };
@@ -334,21 +369,67 @@ const styles = StyleSheet.create({
   titleDark: {
     color: '#fff',
   },
+  sectionWithLabels: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    justifyContent: 'space-between',
+    flex: 1,
+  },
+  verticalLabelContainer: {
+    width: 40,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  verticalLabel: {
+    backgroundColor: '#f3f4f6',
+    paddingVertical: 4,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    transform: [{ rotate: '-90deg' }],
+    width: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  verticalLabelDark: {
+    backgroundColor: '#374151',
+  },
+  verticalLabelText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#4b5563',
+    textAlign: 'center',
+  },
+  verticalLabelTextDark: {
+    color: '#d1d5db',
+  },
+  sensorsContainer: {
+    flex: 1,
+    marginHorizontal: 8,
+  },
+  sensorSection: {
+    marginBottom: 6, // Reduced from 12 to 6
+  },
+  sectionHeader: {
+    marginBottom: 4, // Reduced from 8 to 4
+  },
+  sectionHeading: {
+    fontSize: 11, // Slightly smaller font
+    fontWeight: '600',
+    color: '#4b5563',
+    marginLeft: 2,
+  },
+  sectionHeadingDark: {
+    color: '#d1d5db',
+  },
   sensorsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
-  separateSection: {
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#e5e5e5',
-  },
   infoMessage: {
     borderRadius: 8,
     padding: 10,
-    marginBottom: 12,
+    marginBottom: 8, // Reduced from 12 to 8
     alignItems: 'center',
   },
   infoMessageSuccess: {
@@ -395,10 +476,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
     borderRadius: 12,
     padding: 8,
-    marginBottom: 8,
+    marginBottom: 6, // Reduced from 8 to 6
     alignItems: 'center',
     position: 'relative',
-    minHeight: 56,
+    minHeight: 52, // Reduced from 56 to 52
     justifyContent: 'center',
   },
   sensorIconDark: {
