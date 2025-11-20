@@ -215,10 +215,10 @@ const SensorStatusPanel: React.FC<SensorStatusPanelProps> = ({
   const radarSensors = sensors.filter(sensor => sensor.type === 'radar');
   const securitySensors = sensors.filter(sensor => sensor.type === 'security' || sensor.type === 'door');
 
-  const renderSensorGroup = (sensorList: SensorDevice[], itemsPerRow: number) => {
+  const renderSensorGroup = (sensorList: SensorDevice[], itemsPerRow: number, startingNumber: number = 1) => {
     const sensorWidth = itemsPerRow === 4 ? '23%' : '48%';
     
-    return sensorList.map((sensor) => {
+    return sensorList.map((sensor, index) => {
       const { hasIssue, status, isDisabled, color } = getSensorStatus(sensor);
       const data = binarySensorData[sensor.entity] || null;
       const isActive = !isDisabled && data?.new_state === 'on';
@@ -240,6 +240,13 @@ const SensorStatusPanel: React.FC<SensorStatusPanelProps> = ({
           onPress={() => !isDisabled && onSensorPress(sensor, data)}
           disabled={isDisabled}
         >
+          {/* Sensor number */}
+          <View style={[styles.sensorNumber, isDark && styles.sensorNumberDark]}>
+            <Text style={[styles.sensorNumberText, isDark && styles.sensorNumberTextDark]}>
+              {startingNumber + index}
+            </Text>
+          </View>
+          
           <IconContainer style={[styles.iconContainer, animatedStyle]}>
             <Text style={[styles.iconText, isDisabled && styles.iconTextDisabled]}>
               {getSensorIcon(sensor.type, isActive)}
@@ -265,7 +272,7 @@ const SensorStatusPanel: React.FC<SensorStatusPanelProps> = ({
     });
   };
 
-  const renderSensorSection = (sensorList: SensorDevice[], heading: string, itemsPerRow: number = 4) => {
+  const renderSensorSection = (sensorList: SensorDevice[], heading: string, itemsPerRow: number = 4, startingNumber: number = 1) => {
     if (sensorList.length === 0) return null;
 
     return (
@@ -276,7 +283,7 @@ const SensorStatusPanel: React.FC<SensorStatusPanelProps> = ({
           </Text>
         </View>
         <View style={styles.sensorsGrid}>
-          {renderSensorGroup(sensorList, itemsPerRow)}
+          {renderSensorGroup(sensorList, itemsPerRow, startingNumber)}
         </View>
       </View>
     );
@@ -324,10 +331,10 @@ const SensorStatusPanel: React.FC<SensorStatusPanelProps> = ({
         
         {/* Sensors sections */}
         <View style={styles.sensorsContainer}>
-          {renderSensorSection(ceilingSensors, "Ceiling Sensors")}
-          {renderSensorSection(floorSensors, "Floor Sensors")}
-          {renderSensorSection(radarSensors, "Radar Sensors")}
-          {renderSensorSection(securitySensors, "Security Sensors", 2)}
+          {renderSensorSection(ceilingSensors, "Ceiling Sensors", 4, 1)}
+          {renderSensorSection(floorSensors, "Floor Sensors", 4, 1)}
+          {renderSensorSection(radarSensors, "Radar Sensors", 4, 1)}
+          {renderSensorSection(securitySensors, "Security Sensors", 2, 1)}
         </View>
         
         {/* Interior label */}
@@ -534,6 +541,29 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
+  },
+  sensorNumber: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 10,
+    width: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  sensorNumberDark: {
+    backgroundColor: 'rgba(57, 55, 55, 0.8)',
+  },
+  sensorNumberText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#000',
+  },
+  sensorNumberTextDark: {
+    color: '#fff',
   },
 });
 
