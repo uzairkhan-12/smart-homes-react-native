@@ -1,5 +1,7 @@
 import { useTheme } from '@/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import React, { useEffect, useState } from 'react';
 import {
   Animated,
@@ -17,6 +19,7 @@ interface AcSettingsModalProps {
   visible: boolean;
   selectedAc: SensorDevice | null;
   onClose: () => void;
+  avgTemperature?: number;
 }
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -25,6 +28,7 @@ const AcSettingsModal: React.FC<AcSettingsModalProps> = ({
   visible,
   selectedAc,
   onClose,
+  avgTemperature,
 }) => {
   const { isDark: isDarkTheme } = useTheme();
   const [acData, setAcData] = useState<ClimateData | null>(null);
@@ -120,15 +124,15 @@ const AcSettingsModal: React.FC<AcSettingsModalProps> = ({
   };
 
   const getModeIcon = (mode: string) => {
-    const icons: { [key: string]: string } = {
-      'off': '⏻',
-      'heat': '🔥',
-      'cool': '❄️',
-      'heat_cool': '🌡️',
-      'fan_only': '💨',
-      'dry': '💧'
+    const iconName: { [key: string]: string } = {
+      'off': 'power-outline',
+      'heat': 'heat-wave',
+      'cool': 'snow-outline',
+      'heat_cool': 'thermometer-outline',
+      'fan_only': 'fan',
+      'dry': 'water-outline'
     };
-    return icons[mode] || '🌡️';
+    return iconName[mode] || 'thermometer-outline';
   };
 
   const currentTemp = acData.attributes.temperature || 22;
@@ -184,8 +188,10 @@ const AcSettingsModal: React.FC<AcSettingsModalProps> = ({
           <View style={[styles.statusCard, isDarkTheme && styles.statusCardDark]}>
             <View style={styles.statusRow}>
               <View style={styles.statusItem}>
-                <Text style={[styles.statusLabel, isDarkTheme && styles.textSecondaryDark]}>Target</Text>
-                <Text style={[styles.statusValue, isDarkTheme && styles.textDark]}>{currentTemp}°C</Text>
+                <Text style={[styles.statusLabel, isDarkTheme && styles.textSecondaryDark]}>12h Avg</Text>
+                <Text style={[styles.statusValue, isDarkTheme && styles.textDark]}>
+                  {avgTemperature ? `${avgTemperature.toFixed(1)}°C` : '--°C'}
+                </Text>
               </View>
               {currentTemperatureReading !== null && (
                 <View style={styles.statusItem}>
@@ -208,13 +214,18 @@ const AcSettingsModal: React.FC<AcSettingsModalProps> = ({
               </Text>
               <View style={styles.tempControl}>
                 <TouchableOpacity 
-                  style={[styles.tempButton, isDarkTheme && styles.tempButtonDark]}
+                  style={[
+                    styles.tempButton, 
+                    isDarkTheme && styles.tempButtonDark,
+                    currentTemp <= (acData.attributes.min_temp || 16) && styles.tempButtonDisabled,
+                    currentTemp <= (acData.attributes.min_temp || 16) && isDarkTheme && styles.tempButtonDisabledDark
+                  ]}
                   onPress={() => handleTemperatureChange(false)}
                   disabled={currentTemp <= (acData.attributes.min_temp || 16)}
                 >
                   <Ionicons 
                     name="remove" 
-                    size={24} 
+                    size={28} 
                     color={
                       currentTemp <= (acData.attributes.min_temp || 16) 
                         ? (isDarkTheme ? '#444' : '#ccc')
@@ -229,13 +240,18 @@ const AcSettingsModal: React.FC<AcSettingsModalProps> = ({
                 </View>
                 
                 <TouchableOpacity 
-                  style={[styles.tempButton, isDarkTheme && styles.tempButtonDark]}
+                  style={[
+                    styles.tempButton, 
+                    isDarkTheme && styles.tempButtonDark,
+                    currentTemp >= (acData.attributes.max_temp || 32) && styles.tempButtonDisabled,
+                    currentTemp >= (acData.attributes.max_temp || 32) && isDarkTheme && styles.tempButtonDisabledDark
+                  ]}
                   onPress={() => handleTemperatureChange(true)}
                   disabled={currentTemp >= (acData.attributes.max_temp || 32)}
                 >
                   <Ionicons 
                     name="add" 
-                    size={24} 
+                    size={28} 
                     color={
                       currentTemp >= (acData.attributes.max_temp || 32) 
                         ? (isDarkTheme ? '#444' : '#ccc')
@@ -267,7 +283,32 @@ const AcSettingsModal: React.FC<AcSettingsModalProps> = ({
                   ]}
                   onPress={() => handleModeChange(mode)}
                 >
-                  <Text style={styles.optionIcon}>{getModeIcon(mode)}</Text>
+                  {mode === 'heat_cool' ? (
+                    <Text style={[
+                      styles.optionIcon,
+                      { color: isDarkTheme ? '#fff' : '#333' }
+                    ]}>
+                      A
+                    </Text>
+                  ) : mode === 'heat' ? (
+                    <MaterialCommunityIcons 
+                      name={getModeIcon(mode) as any} 
+                      size={28} 
+                      color={isDarkTheme ? '#fff' : '#333'} 
+                    />
+                  ) : mode === 'fan_only' ? (
+                    <MaterialCommunityIcons 
+                      name={getModeIcon(mode) as any} 
+                      size={28} 
+                      color={isDarkTheme ? '#fff' : '#333'} 
+                    />
+                  ) : (
+                    <Ionicons 
+                      name={getModeIcon(mode) as any} 
+                      size={28} 
+                      color={isDarkTheme ? '#fff' : '#333'} 
+                    />
+                  )}
                   <Text style={[
                     styles.optionText, 
                     isDarkTheme && styles.textDark,
@@ -298,7 +339,38 @@ const AcSettingsModal: React.FC<AcSettingsModalProps> = ({
                     ]}
                     onPress={() => handleFanSpeedChange(fanMode)}
                   >
-                    <Text style={styles.optionIcon}>💨</Text>
+                    {fanMode === 'low' ? (
+                      <MaterialCommunityIcons 
+                        name="fan-speed-1" 
+                        size={28} 
+                        color={isDarkTheme ? '#fff' : '#333'} 
+                      />
+                    ) : (fanMode === 'medium' || fanMode === 'mid') ? (
+                      <MaterialCommunityIcons 
+                        name="fan-speed-2" 
+                        size={28} 
+                        color={isDarkTheme ? '#fff' : '#333'} 
+                      />
+                    ) : fanMode === 'high' ? (
+                      <MaterialCommunityIcons 
+                        name="fan-speed-3" 
+                        size={28} 
+                        color={isDarkTheme ? '#fff' : '#333'} 
+                      />
+                    ) : fanMode === 'auto' ? (
+                      <Text style={[
+                        styles.optionIcon,
+                        { color: isDarkTheme ? '#fff' : '#333' }
+                      ]}>
+                        A
+                      </Text>
+                    ) : (
+                      <MaterialCommunityIcons 
+                        name="fan" 
+                        size={28} 
+                        color={isDarkTheme ? '#fff' : '#333'} 
+                      />
+                    )}
                     <Text style={[
                       styles.optionText, 
                       isDarkTheme && styles.textDark,
@@ -423,16 +495,24 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   tempButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
     alignItems: 'center',
-    marginHorizontal: 24,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    marginHorizontal: 12,
+    minWidth: 80,
   },
   tempButtonDark: {
     backgroundColor: '#2a2a2a',
+  },
+  tempButtonDisabled: {
+    opacity: 0.5,
+  },
+  tempButtonDisabledDark: {
+    opacity: 0.5,
   },
   tempDisplay: {
     alignItems: 'center',
@@ -481,7 +561,7 @@ const styles = StyleSheet.create({
     borderColor: '#42A5F5',
   },
   optionIcon: {
-    fontSize: 20,
+    fontSize: 28,
     marginBottom: 8,
   },
   optionText: {

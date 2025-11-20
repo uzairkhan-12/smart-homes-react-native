@@ -658,7 +658,7 @@ const DashboardScreen: React.FC = () => {
       </View>
 
       {/* Modals */}
-      <AcSettingsModal visible={acModalVisible} selectedAc={selectedAc} onClose={closeAcSettings} />
+      <AcSettingsModal visible={acModalVisible} selectedAc={selectedAc} onClose={closeAcSettings} avgTemperature={avgTemperature} />
       <TemperatureDetailsModal
         visible={temperatureModalVisible}
         temperatureSensors={storedDevices?.temperatureSensors || []}
