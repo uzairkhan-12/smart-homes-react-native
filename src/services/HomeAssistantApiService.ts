@@ -1,6 +1,6 @@
 import { BinarySensorData, ClimateData, LightData, SensorData } from '../../types';
 import { fetchWithTimeout } from '../utils/fetch';
-import { homeAssistantConfigService } from './HomeAssistantConfigService';
+import { dynamicConfigService } from './DynamicConfigService';
 
 export interface HAApiEntityState {
   entity_id: string;
@@ -46,8 +46,8 @@ export class HomeAssistantApiService {
   // Generic method to fetch entity state
   private async fetchEntityState(entityId: string): Promise<HAApiEntityState | null> {
     try {
-      const apiUrl = await homeAssistantConfigService.getApiUrl();
-      const authHeader = await homeAssistantConfigService.getAuthHeader();
+      const apiUrl = await dynamicConfigService.getApiUrl();
+      const authHeader = `Bearer ${await dynamicConfigService.getToken()}`;
       
       const response = await fetchWithTimeout(`${apiUrl}/states/${entityId}`, {
         method: 'GET',
@@ -200,8 +200,8 @@ export class HomeAssistantApiService {
   // Fetch all states (if needed for debugging)
   async fetchAllStates(): Promise<HAApiEntityState[]> {
     try {
-      const apiUrl = await homeAssistantConfigService.getApiUrl();
-      const authHeader = await homeAssistantConfigService.getAuthHeader();
+      const apiUrl = await dynamicConfigService.getApiUrl();
+      const authHeader = `Bearer ${await dynamicConfigService.getToken()}`;
       
       const response = await fetchWithTimeout(`${apiUrl}/states`, {
         method: 'GET',
@@ -229,11 +229,10 @@ export class HomeAssistantApiService {
   // Test connection to Home Assistant
   async testConnection(): Promise<boolean> {
     try {
-      const config = await homeAssistantConfigService.getConfig();
-      const authHeader = await homeAssistantConfigService.getAuthHeader();
+      const authHeader = `Bearer ${await dynamicConfigService.getToken()}`;
       
       // Use the updated method that handles proxy/direct URL logic
-      const apiUrl = await homeAssistantConfigService.getApiUrl();
+      const apiUrl = await dynamicConfigService.getApiUrl();
       
 
       
@@ -258,8 +257,8 @@ export class HomeAssistantApiService {
   // Fetch historical data for an entity
   async fetchEntityHistory(entityId: string, startTime: string): Promise<HAHistoryState[]> {
     try {
-      const authHeader = await homeAssistantConfigService.getAuthHeader();
-      const apiUrl = await homeAssistantConfigService.getApiUrl();
+      const authHeader = `Bearer ${await dynamicConfigService.getToken()}`;
+      const apiUrl = await dynamicConfigService.getApiUrl();
       
       const historyUrl = `${apiUrl}/history/period/${startTime}?filter_entity_id=${entityId}`;
       

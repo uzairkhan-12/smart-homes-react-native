@@ -1,0 +1,2 @@
+BASE_URL,TOKEN,WEBSOCKET_URL
+https://hajax.primewave1.click,eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJlNmY1MDliNGE1NmQ0YTRmYjg1YmNjOTA3OGRmMmJkYiIsImlhdCI6MTc2Mjc4MzgxOCwiZXhwIjoyMDc4MTQzODE4fQ.DgTx1Ii-4318sL0A-Sm8BXCjCcrVtBgaGnYnhuP4ILA,ws://192.168.100.95:3040/api/ws/entities_live

@@ -1,0 +1,2 @@
+haBaseUrl,haToken,websocketUrl
+http://192.168.100.60:8123,eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIwZGIwM2M1Y2Y2ZWI0MGFmYjNhMTUxNmU0Mzk4ZGQxOSIsImlhdCI6MTc1NzgwNDAxMiwiZXhwIjoyMDczMTY0MDEyfQ.bhrLV6mhfbVnhr7cuwyncUq1R_0SYT6RDWlHPRveZ1A,ws://192.168.100.95:3040/api/ws/entities_live

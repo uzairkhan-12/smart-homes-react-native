@@ -1,0 +1,11 @@
+// Default Configuration Values - HA Config Only
+export const DEFAULT_CONFIG = {
+  HA_Config: {
+    WEBSOCKET_URL: "ws://192.168.100.95:3040/api/ws/entities_live",
+    BASE_URL: "https://hajax.primewave1.click",
+    API_URL: "https://hajax.primewave1.click/api",
+    TOKEN: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJlNmY1MDliNGE1NmQ0YTRmYjg1YmNjOTA3OGRmMmJkYiIsImlhdCI6MTc2Mjc4MzgxOCwiZXhwIjoyMDc4MTQzODE4fQ.DgTx1Ii-4318sL0A-Sm8BXCjCcrVtBgaGnYnhuP4ILA"
+  }
+};
+
+export type ConfigType = typeof DEFAULT_CONFIG;

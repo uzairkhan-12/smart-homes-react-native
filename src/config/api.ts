@@ -26,7 +26,7 @@ export const BACKEND_CONFIG = {
 
 // Home Assistant Direct API (for fallback only)
 export const HA_DIRECT_CONFIG = {
-  BASE_URL: "http://192.168.100.60:8123",
-  API_URL: "http://192.168.100.60:8123/api",
-  TOKEN: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIwZGIwM2M1Y2Y2ZWI0MGFmYjNhMTUxNmU0Mzk4ZGQxOSIsImlhdCI6MTc1NzgwNDAxMiwiZXhwIjoyMDczMTY0MDEyfQ.bhrLV6mhfbVnhr7cuwyncUq1R_0SYT6RDWlHPRveZ1A"
+  BASE_URL: "https://hajax.primewave1.click",
+  API_URL: "https://hajax.primewave1.click/api",
+  TOKEN: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJlNmY1MDliNGE1NmQ0YTRmYjg1YmNjOTA3OGRmMmJkYiIsImlhdCI6MTc2Mjc4MzgxOCwiZXhwIjoyMDc4MTQzODE4fQ.DgTx1Ii-4318sL0A-Sm8BXCjCcrVtBgaGnYnhuP4ILA"
 };

@@ -146,7 +146,7 @@ export default function LoginScreen() {
       height: 150,
     },
     title: {
-      fontSize: 32,
+      fontSize: 24,
       fontWeight: 'bold',
       color: colors.text,
       textAlign: 'center',
@@ -233,6 +233,25 @@ export default function LoginScreen() {
       borderRadius: 8,
       backgroundColor: colors.surfaceSecondary,
     },
+    
+    poweredByText: {
+  fontSize: 14,
+  color: colors.textSecondary,
+  marginRight: 8,
+  fontWeight: '500',
+},
+footerLogo: {
+  width: 120,
+  height: 120,
+  resizeMode: 'contain',
+},
+footerContainer: {
+  paddingVertical: 20,
+  paddingBottom: 30,
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+},
   });
 
   return (
@@ -241,18 +260,7 @@ export default function LoginScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* PM Logo in top left */}
-        <View style={styles.logoTopContainer}>
-          <Image
-            source={
-              isDark
-                ? require('@/assets/images/whitelogo.png')
-                : require('@/assets/images/PMLogo.png')
-            }
-            style={styles.topLogo}
-            resizeMode="contain"
-          />
-        </View>
+
 
         {/* Floating Theme Toggle */}
         <View style={styles.themeToggleContainer}>
@@ -287,8 +295,8 @@ export default function LoginScreen() {
                 resizeMode="contain"
               />
             </View>
+<Text style={styles.title}>Login to Binnale Data Center - Riyadh</Text>
 
-            <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>Enter your 6-digit access code</Text>
 
             <View style={styles.codeContainer}>
@@ -353,12 +361,28 @@ export default function LoginScreen() {
                 {isLoading ? 'Authenticating...' : 'Login'}
               </Text>
             </TouchableOpacity>
-
+{/* 
             <Text style={styles.helpText}>
               Can't access your account?{'\n'}
               Contact support for assistance
-            </Text>
+            </Text> */}
           </ScrollView>
+
+          {/* Footer - Only show when keyboard is hidden */}
+          {!keyboardVisible && (
+            <View style={styles.footerContainer}>
+              <Text style={styles.poweredByText}>Powered by</Text>
+              <Image
+                source={
+                  isDark
+                    ? require('@/assets/images/whitelogo.png')
+                    : require('@/assets/images/PMLogo.png')
+                }
+                style={styles.footerLogo}
+                resizeMode="contain"
+              />
+            </View>
+          )}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

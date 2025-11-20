@@ -17,8 +17,11 @@ import {
   View,
   useColorScheme
 } from 'react-native';
-import HomeAssistantConfigModal from '../../components/Modals/HomeAssistantConfigModal';
+import EntityDetailsModal from '../../components/ui/EntityDetailsModal';
+import TempHumidityDetailsModal from '../../components/ui/TempHumidityDetailsModal';
 import UserConfigModal from '../components/Modals/UsersConfigModal';
+import { SimpleConfigurationModal } from '../../components/Modals/SimpleConfigurationModal';
+
 import { deviceStorageService } from '../services/DeviceStorageService';
 import { SensorDevice, StoredDevices } from '../types';
 
@@ -444,8 +447,9 @@ const SettingsScreen: React.FC = () => {
   const [devices, setDevices] = useState<StoredDevices | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [haConfigModalVisible, setHaConfigModalVisible] = useState(false);
+
   const [usersModalVisible, setUsersModalVisible] = useState(false);
+  const [configModalVisible, setConfigModalVisible] = useState(false);
   const [activeSection, setActiveSection] = useState<SettingsSection>('devices');
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [collapsedSections, setCollapsedSections] = useState<CollapsibleSection>({
@@ -979,7 +983,7 @@ const getSectionIcon = (sectionType: string): any => {
               </TouchableOpacity>
             </View>
 
-            {/* Expand/Collapse Buttons - Only show for Devices section */}
+            {/* Quick Actions - Show different actions based on section */}
             {activeSection === 'devices' && (
               <View style={styles.quickActionsRow}>
                 <TouchableOpacity
@@ -995,6 +999,35 @@ const getSectionIcon = (sectionType: string): any => {
                 >
                   <Ionicons name="contract-outline" size={16} color={colors.primary} />
                   <Text style={styles.quickActionText}>Collapse All</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.quickActionButton}
+                  onPress={() => setConfigModalVisible(true)}
+                >
+                  <Ionicons name="server-outline" size={16} color={colors.primary} />
+                  <Text style={styles.quickActionText}>Config</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            
+            {activeSection === 'users' && (
+              <View style={styles.quickActionsRow}>
+                <TouchableOpacity
+                  style={styles.quickActionButton}
+                  onPress={() => setConfigModalVisible(true)}
+                >
+                  <Ionicons name="server-outline" size={16} color={colors.primary} />
+                  <Text style={styles.quickActionText}>Server Config</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.quickActionButton}
+                  onPress={() => {
+                    setEditingUser(null);
+                    setUsersModalVisible(true);
+                  }}
+                >
+                  <Ionicons name="person-add-outline" size={16} color={colors.primary} />
+                  <Text style={styles.quickActionText}>Add User</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -1035,18 +1068,18 @@ const getSectionIcon = (sectionType: string): any => {
         <View style={styles.bottomSpacer} />
       </ScrollView>
       
-      {/* Home Assistant Configuration Modal */}
-      <HomeAssistantConfigModal
-        visible={haConfigModalVisible}
-        onClose={() => setHaConfigModalVisible(false)}
-      />
-      
       {/* User Configuration Modal */}
       <UserConfigModal
         visible={usersModalVisible}
         onClose={handleCloseUserModal}
         onUserSaved={handleUserSaved}
         editingUser={editingUser}
+      />
+
+      {/* Configuration Modal */}
+      <SimpleConfigurationModal
+        visible={configModalVisible}
+        onClose={() => setConfigModalVisible(false)}
       />
     </KeyboardAvoidingView>
   );

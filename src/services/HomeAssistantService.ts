@@ -1,9 +1,29 @@
 import { AppState, AppStateStatus } from 'react-native';
 import { BinarySensorData, ClimateData, LightData, SensorData } from '../../types';
 import { fetchWithTimeout } from '../utils/fetch';
-import { WEBSOCKET_URL } from '../config/api';
 import { homeAssistantApiService } from './HomeAssistantApiService';
-import { homeAssistantConfigService } from './HomeAssistantConfigService';
+import { deviceStorageService } from './DeviceStorageService';
+import { dynamicConfigService } from './DynamicConfigService';
+
+// Helper function to get configuration
+const getConfig = async () => {
+  const config = await dynamicConfigService.getConfig();
+  return {
+    baseUrl: config.HA_Config.BASE_URL,
+    apiUrl: config.HA_Config.API_URL,
+    token: config.HA_Config.TOKEN,
+    httpApiUrl: config.HA_Config.API_URL
+  };
+};
+
+const getApiUrl = async () => {
+  return await dynamicConfigService.getApiUrl();
+};
+
+const getAuthHeader = async () => {
+  const token = await dynamicConfigService.getToken();
+  return `Bearer ${token}`;
+};
 
 export interface EntityState {
   entity_id: string;
@@ -32,6 +52,7 @@ class HomeAssistantService {
   private isAppInBackground = false;
   private shouldReconnectOnForeground = false;
   private appStateSubscription: any = null;
+  private configSubscription: (() => void) | null = null;
   
   // Current data state - starts with dummy data
   private currentData: HomeAssistantData = {
@@ -44,11 +65,57 @@ class HomeAssistantService {
   constructor() {
     this.initializeWithDummyData();
     this.setupAppStateListener();
+    this.setupConfigurationChangeListener();
   }
 
   // Setup app state listener to handle background/foreground transitions
   private setupAppStateListener(): void {
     this.appStateSubscription = AppState.addEventListener('change', this.handleAppStateChange);
+  }
+
+  // Setup configuration change listener for hot reloading
+  private setupConfigurationChangeListener(): void {
+    this.configSubscription = dynamicConfigService.subscribe((newConfig) => {
+      console.log('🔄 Configuration changed, reconnecting WebSocket...');
+      this.handleConfigurationChange(newConfig);
+    });
+  }
+
+  // Handle configuration changes by reconnecting WebSocket
+  private async handleConfigurationChange(newConfig: any): Promise<void> {
+    try {
+      // Clear cache to ensure fresh config is used
+      await dynamicConfigService.clearCacheAndReload();
+      
+      // Close existing WebSocket connection
+      if (this.websocket) {
+        console.log('🔌 Closing existing WebSocket connection for config change');
+        this.websocket.close();
+        this.websocket = null;
+      }
+
+      // Reset reconnection attempts for fresh start
+      this.reconnectAttempts = 0;
+      
+      // Clear any pending reconnection timers
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+      }
+
+      // Wait a moment for cleanup, then reconnect with new configuration
+      setTimeout(async () => {
+        try {
+          console.log('🔄 Connecting with new configuration...');
+          await this.connectWebSocket();
+          console.log('✅ Successfully reconnected with new configuration');
+        } catch (error) {
+          console.error('❌ Failed to reconnect with new configuration:', error);
+        }
+      }, 1000);
+    } catch (error) {
+      console.error('❌ Error handling configuration change:', error);
+    }
   }
 
   // Handle app state changes (background/foreground)
@@ -104,7 +171,7 @@ class HomeAssistantService {
       console.log('🔄 Refreshing services after foreground...');
       
       // Validate configuration is still valid
-      const config = await homeAssistantConfigService.getConfig();
+      const config = await getConfig();
       if (!config || !config.httpApiUrl || !config.token) {
         console.warn('⚠️ Configuration invalid after foreground, skipping refresh');
         return;
@@ -129,8 +196,9 @@ class HomeAssistantService {
       console.log('📹 Validating camera URLs after foreground...');
       
       // Get fresh configuration URLs
-      const apiUrl = await homeAssistantConfigService.getApiUrl();
-      const authHeader = await homeAssistantConfigService.getAuthHeader();
+      const config = await getConfig();
+      const apiUrl = config.apiUrl;
+      const authHeader = `Bearer ${config.token}`;
       
       if (!apiUrl || apiUrl.includes('undefined') || !authHeader) {
         console.error('❌ Invalid API configuration for cameras:', { apiUrl, hasAuth: !!authHeader });
@@ -581,15 +649,21 @@ class HomeAssistantService {
 
     try {
       // Validate configuration first
-      const config = await homeAssistantConfigService.getConfig();
+      const config = await getConfig();
       if (!config || !config.httpApiUrl || !config.token) {
         console.warn('⚠️ No valid Home Assistant configuration found, skipping WebSocket connection');
         return;
       }
 
-      // Use centralized WebSocket URL from api.ts
-      const websocketUrl = WEBSOCKET_URL;
-      console.log('🔌 Connecting to WebSocket:', websocketUrl);
+      // Use dynamic WebSocket URL
+      const websocketUrl = await dynamicConfigService.getWebSocketUrl();
+      console.log('🔌 WebSocket - About to connect to:', websocketUrl);
+      
+      // Double-check by getting full config
+      const fullConfig = await dynamicConfigService.getConfig();
+      console.log('🔍 WebSocket - Full config WEBSOCKET_URL:', fullConfig.HA_Config.WEBSOCKET_URL);
+      console.log('🔍 WebSocket - URLs match:', websocketUrl === fullConfig.HA_Config.WEBSOCKET_URL);
+      
       this.websocket = new WebSocket(websocketUrl);
 
       this.websocket.onopen = () => {
@@ -705,14 +779,12 @@ class HomeAssistantService {
     
     this.reconnectTimer = setTimeout(async () => {
       try {
-        // Validate configuration before attempting reconnection
-        const config = await homeAssistantConfigService.getConfig();
-        if (!config?.token) {
-          console.error('❌ Cannot reconnect WebSocket: No token configured');
-          return;
-        }
-        
-        await this.connectWebSocket();
+      // Validate configuration before attempting reconnection
+      const config = await getConfig();
+      if (!config?.token) {
+        console.error('❌ Cannot reconnect WebSocket: No token configured');
+        return;
+      }        await this.connectWebSocket();
       } catch (error) {
         console.error('Failed to reconnect WebSocket:', error);
       }
@@ -748,7 +820,13 @@ class HomeAssistantService {
       this.appStateSubscription.remove();
       this.appStateSubscription = null;
     }
-    
+
+    // Remove configuration change listener
+    if (this.configSubscription) {
+      this.configSubscription();
+      this.configSubscription = null;
+    }
+
     // Reset connection state
     this.reconnectAttempts = 0;
     this.isAppInBackground = false;
@@ -785,7 +863,7 @@ class HomeAssistantService {
       console.log('🔄 Manually refreshing connections...');
       
       // Validate configuration
-      const config = await homeAssistantConfigService.getConfig();
+      const config = await getConfig();
       if (!config || !config.httpApiUrl || !config.token) {
         console.warn('⚠️ No valid configuration for refresh');
         return;
@@ -883,9 +961,10 @@ class HomeAssistantService {
         const action = newState === 'on' ? 'turn_on' : 'turn_off';
 
         
-        // Use direct backend API call for lights
-        const { API_BASE_URL } = require('../config/api');
-        const response = await fetchWithTimeout(`${API_BASE_URL}/ha/service/light_toggle`, {
+        // Use direct backend API call for lights - using WebSocket URL base for now
+        const websocketUrl = await dynamicConfigService.getWebSocketUrl();
+        const apiBaseUrl = websocketUrl.replace('ws://', 'http://').replace('/api/ws/entities_live', '/api');
+        const response = await fetchWithTimeout(`${apiBaseUrl}/ha/service/light_toggle`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1044,11 +1123,11 @@ class HomeAssistantService {
   // Call Home Assistant service
   private async callHomeAssistantService(domain: string, service: string, serviceData: any): Promise<void> {
     try {
-      const config = await homeAssistantConfigService.getConfig();
-      const authHeader = await homeAssistantConfigService.getAuthHeader();
+      const config = await getConfig();
+      const authHeader = await getAuthHeader();
       
       // Use the updated getApiUrl method that handles proxy/direct URL logic
-      const apiUrl = await homeAssistantConfigService.getApiUrl();
+      const apiUrl = await getApiUrl();
       const serviceUrl = `${apiUrl}/services/${domain}/${service}`;
       
 

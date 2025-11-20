@@ -34,7 +34,7 @@ import { BinarySensorData, ClimateData, LightData, SensorData, SensorDevice } fr
 import { deviceStorageService } from '../services/DeviceStorageService';
 import { HomeAssistantData, homeAssistantService } from '../services/HomeAssistantService';
 import { homeAssistantApiService } from '../services/HomeAssistantApiService';
-import { homeAssistantConfigService } from '../services/HomeAssistantConfigService';
+
 import { ensureCorrectCameraConfig } from '../utils/configurationFixer';
 
 const CONTAINER_PADDING = 4;
@@ -89,6 +89,34 @@ const DashboardScreen: React.FC = () => {
 
   // Subscribe to Home Assistant
   useEffect(() => {
+    // Log HA Config from AsyncStorage when dashboard loads
+    const logHAConfig = async () => {
+      try {
+        const { dynamicConfigService } = await import('../services/DynamicConfigService');
+        
+        // Test AsyncStorage directly
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        const rawStoredData = await AsyncStorage.getItem('@smart_home_config');
+        console.log('🔍 Raw AsyncStorage data:', rawStoredData);
+        
+        const config = await dynamicConfigService.getConfig();
+        console.log('📋 HA Configuration loaded from AsyncStorage:');
+        console.log('🏠 HA Base URL:', config.HA_Config.BASE_URL);
+        console.log('🔗 HA API URL:', config.HA_Config.API_URL);
+        console.log('🔑 HA Token:', config.HA_Config.TOKEN.substring(0, 20) + '...');
+        console.log('🔌 WebSocket URL:', config.HA_Config.WEBSOCKET_URL);
+        console.log('📊 Full HA_Config Object:', JSON.stringify(config.HA_Config, null, 2));
+        
+        // Test the WebSocket URL getter specifically
+        const wsUrl = await dynamicConfigService.getWebSocketUrl();
+        console.log('🎯 WebSocket URL from getter:', wsUrl);
+      } catch (error) {
+        console.error('❌ Failed to load HA config from AsyncStorage:', error);
+      }
+    };
+    
+    logHAConfig();
+
     const unsubscribe = homeAssistantService.subscribe((data: HomeAssistantData) => {
       setHaData(data);
       // Only update connection state if we're not in initial loading phase
@@ -469,9 +497,6 @@ const DashboardScreen: React.FC = () => {
             }
             style={styles.loadingLogo}
           />
-          <Text style={[styles.loadingTitle, isDarkTheme && styles.loadingTitleDark]}>
-            Smart Home
-          </Text>
           <Text style={[styles.loadingText, isDarkTheme && styles.loadingTextDark]}>
             Loading dashboard...
           </Text>
