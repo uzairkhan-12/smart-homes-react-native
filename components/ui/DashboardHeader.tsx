@@ -3,8 +3,10 @@ import { useTheme } from '@/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import CustomAlert from '@/components/ui/CustomAlert';
+import { useCustomAlert } from '@/hooks/useCustomAlert';
 
 export interface DashboardHeaderProps {
   avgTemperature?: number;
@@ -12,6 +14,8 @@ export interface DashboardHeaderProps {
   onTemperaturePress?: () => void;
   onHumidityPress?: () => void;
   connectionState?: 'loading' | 'connected' | 'offline';
+  binarySensorData?: { [key: string]: any };
+  configuredSensors?: any[];
 }
 
 export default function DashboardHeader({
@@ -20,11 +24,14 @@ export default function DashboardHeader({
   onTemperaturePress,
   onHumidityPress,
   connectionState = 'offline',
+  binarySensorData = {},
+  configuredSensors = [],
 }: DashboardHeaderProps) {
   const { logout, hasAdminAccess } = useAuth();
   const { theme, setTheme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const { alertState, showAlert, hideAlert } = useCustomAlert();
 
   // Update time every minute
   useEffect(() => {
@@ -46,17 +53,21 @@ export default function DashboardHeader({
   };
 
   const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Logout',
-        style: 'destructive',
-        onPress: async () => {
-          await logout();
-          router.replace('/login');
+    showAlert({
+      title: 'Logout',
+      message: 'Are you sure you want to logout?',
+      buttons: [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            router.replace('/login');
+          },
         },
-      },
-    ]);
+      ],
+    });
   };
 
   const handleSettingsPress = () => {
@@ -76,6 +87,81 @@ export default function DashboardHeader({
       month: 'short',
       day: 'numeric',
     });
+
+  // Alert logic
+  const checkForAlerts = () => {
+    const alerts = [];
+
+    // Temperature alert (> 22°C)
+    if (avgTemperature && avgTemperature > 22) {
+      alerts.push({
+        type: 'temperature',
+        message: `High Temperature: ${avgTemperature.toFixed(1)}°C`,
+        severity: 'warning'
+      });
+    }
+
+    // Humidity alert (> 40%)
+    if (avgHumidity && avgHumidity > 40) {
+      alerts.push({
+        type: 'humidity',
+        message: `High Humidity: ${avgHumidity.toFixed(1)}%`,
+        severity: 'warning'
+      });
+    }
+
+    // Binary sensor alerts (radar, water, security sensors that are "on")
+    const alertingSensors = configuredSensors.filter(sensor => {
+      if (!sensor.entity || !['radar', 'water', 'security', 'door'].includes(sensor.type)) {
+        return false;
+      }
+      
+      const sensorData = binarySensorData[sensor.entity];
+      return sensorData && sensorData.new_state === 'on';
+    });
+
+    if (alertingSensors.length > 0) {
+      alerts.push({
+        type: 'sensors',
+        message: `${alertingSensors.length} Sensor Alert${alertingSensors.length > 1 ? 's' : ''}`,
+        severity: 'critical',
+        sensors: alertingSensors
+      });
+    }
+
+    return alerts;
+  };
+
+  const alerts = checkForAlerts();
+  const hasAlerts = alerts.length > 0;
+  const criticalAlerts = alerts.filter(a => a.severity === 'critical').length;
+  const warningAlerts = alerts.filter(a => a.severity === 'warning').length;
+
+  // Function to get single alert message for badge display
+  const getSingleAlertMessage = (alert: any) => {
+    if (alert.type === 'sensors' && alert.sensors && alert.sensors.length === 1) {
+      const sensor = alert.sensors[0];
+      switch (sensor.type) {
+        case 'water':
+          return `${sensor.name} Leaking`;
+        case 'door':
+          return `${sensor.name} Open`;
+        case 'security':
+          return `${sensor.name} Alert`;
+        case 'radar':
+          return `${sensor.name} Detected`;
+        default:
+          return `${sensor.name} Active`;
+      }
+    } else if (alert.type === 'sensors' && alert.sensors && alert.sensors.length > 1) {
+      return `${alert.sensors.length} Sensors Active`;
+    } else if (alert.type === 'temperature') {
+      return `High Temp ${avgTemperature?.toFixed(1)}°C`;
+    } else if (alert.type === 'humidity') {
+      return `High Humidity ${avgHumidity?.toFixed(1)}%`;
+    }
+    return 'Alert';
+  };
 
   const dynamicStyles = StyleSheet.create({
     header: {
@@ -169,6 +255,36 @@ export default function DashboardHeader({
       fontWeight: '600',
       color: isDark ? '#ffffff' : '#1a1a1a',
     },
+    alertBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 16,
+      backgroundColor: isDark ? '#1f2937' : '#ffffff',
+      borderWidth: 2,
+      borderColor: hasAlerts 
+        ? (criticalAlerts > 0 ? '#ef4444' : '#f59e0b')
+        : '#10b981',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: isDark ? 0.3 : 0.1,
+      shadowRadius: 4,
+      elevation: 4,
+      maxWidth: 200,
+    },
+    alertBadgeText: {
+      fontSize: hasAlerts && alerts.length === 1 ? 11 : 13,
+      fontWeight: '700',
+      color: hasAlerts 
+        ? (criticalAlerts > 0 ? '#ef4444' : '#f59e0b')
+        : '#10b981',
+      flexShrink: 1,
+    },
+    alertIcon: {
+      fontSize: 16,
+    },
   });
 
   return (
@@ -189,8 +305,73 @@ export default function DashboardHeader({
         </View>
       </View>
 
-      {/* Right: Settings + Temp/Humidity + Theme + Logout */}
+      {/* Right: Alert Badge + Settings + Temp/Humidity + Theme + Logout */}
       <View style={dynamicStyles.rightSection}>
+        {/* Status Badge - Always show either alerts or all good status */}
+        <TouchableOpacity
+          style={dynamicStyles.alertBadge}
+          onPress={() => {
+            if (hasAlerts) {
+              const alertMessages = alerts.map(alert => {
+                if (alert.type === 'sensors' && alert.sensors) {
+                  return alert.sensors.map(sensor => {
+                    switch (sensor.type) {
+                      case 'water':
+                        return `🚰 ${sensor.name} is detecting water leakage`;
+                      case 'door':
+                        return `🚪 ${sensor.name} is currently open`;
+                      case 'security':
+                        return `🔒 ${sensor.name} security alert triggered`;
+                      case 'radar':
+                        return `📡 ${sensor.name} detected motion or presence`;
+                      default:
+                        return `⚠️ ${sensor.name} sensor is active`;
+                    }
+                  }).join('\n');
+                } else if (alert.type === 'temperature') {
+                  return `🌡️ Temperature is above normal threshold\nCurrent: ${avgTemperature?.toFixed(1)}°C (Limit: 22°C)`;
+                } else if (alert.type === 'humidity') {
+                  return `💧 Humidity levels are too high\nCurrent: ${avgHumidity?.toFixed(1)}% (Limit: 40%)`;
+                }
+                return alert.message;
+              }).join('\n\n');
+              
+              showAlert({
+                title: '⚠️ System Alert',
+                message: alertMessages,
+                buttons: [{ text: 'OK', style: 'default' }]
+              });
+            } else {
+              // Show positive status message
+              showAlert({
+                title: '✅ System Status: All Good!',
+                message: `🌟 Everything is running smoothly!\n\n🌡️ Temperature: ${avgTemperature ? `${avgTemperature.toFixed(1)}°C` : 'N/A'} (Normal)\n💧 Humidity: ${avgHumidity ? `${avgHumidity.toFixed(1)}%` : 'N/A'} (Normal)\n📡 All sensors are secure\n\n🎉 Your smart home is in perfect condition!`,
+                buttons: [{ text: 'Awesome!', style: 'default' }]
+              });
+            }
+          }}
+          activeOpacity={0.8}
+        >
+          <Ionicons
+            name={hasAlerts 
+              ? (criticalAlerts > 0 ? 'alert-circle' : 'warning')
+              : 'checkmark-circle'
+            }
+            size={18}
+            color={hasAlerts 
+              ? (criticalAlerts > 0 ? '#ef4444' : '#f59e0b')
+              : '#10b981'
+            }
+            style={dynamicStyles.alertIcon}
+          />
+          <Text style={dynamicStyles.alertBadgeText}>
+            {hasAlerts 
+              ? (alerts.length === 1 ? getSingleAlertMessage(alerts[0]) : `${alerts.length} Alerts`)
+              : 'All Good'
+            }
+          </Text>
+        </TouchableOpacity>
+
         {hasAdminAccess && (
           <TouchableOpacity
             style={dynamicStyles.iconButton}
@@ -289,6 +470,15 @@ export default function DashboardHeader({
           <Ionicons name="log-out-outline" size={20} color="#ffffff" />
         </TouchableOpacity>
       </View>
+
+      {/* Custom Alert */}
+      <CustomAlert
+        visible={alertState.visible}
+        title={alertState.title}
+        message={alertState.message}
+        buttons={alertState.buttons}
+        onDismiss={hideAlert}
+      />
     </View>
   );
 }

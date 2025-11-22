@@ -518,6 +518,8 @@ const DashboardScreen: React.FC = () => {
         onTemperaturePress={() => setTemperatureModalVisible(true)}
         onHumidityPress={() => setHumidityModalVisible(true)}
         connectionState={connectionState}
+        binarySensorData={haData.binarySensorData}
+        configuredSensors={configuredDevices}
       />
 
       <View style={styles.mainContent}>

@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
   Image,
   Keyboard,
   KeyboardAvoidingView,
@@ -19,6 +18,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { getColors } from '@/constants/colors';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
+import CustomAlert from '@/components/ui/CustomAlert';
+import { useCustomAlert } from '@/hooks/useCustomAlert';
 
 // Indigo palette
 const INDIGO = {
@@ -43,6 +44,7 @@ export default function LoginScreen() {
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const inputs = useRef<(TextInput | null)[]>([]);
+  const { alertState, showAlert, hideAlert } = useCustomAlert();
 
   useEffect(() => {
     const showSub = Keyboard.addListener('keyboardDidShow', () =>
@@ -88,12 +90,20 @@ export default function LoginScreen() {
         if (success) {
           router.replace('/(tabs)');
         } else {
-          Alert.alert('Login Failed', 'Invalid access code. Please try again.');
+          showAlert({
+            title: 'Login Failed',
+            message: 'Invalid access code. Please try again.',
+            buttons: [{ text: 'OK', style: 'default' }]
+          });
           resetForm();
         }
       } catch (error) {
         console.error('Login error:', error);
-        Alert.alert('Error', 'An error occurred during login. Please try again.');
+        showAlert({
+          title: 'Error',
+          message: 'An error occurred during login. Please try again.',
+          buttons: [{ text: 'OK', style: 'default' }]
+        });
         resetForm();
       } finally {
         setIsLoading(false);
@@ -386,6 +396,15 @@ footerContainer: {
           )}
         </View>
       </KeyboardAvoidingView>
+
+      {/* Custom Alert */}
+      <CustomAlert
+        visible={alertState.visible}
+        title={alertState.title}
+        message={alertState.message}
+        buttons={alertState.buttons}
+        onDismiss={hideAlert}
+      />
     </SafeAreaView>
   );
 }
